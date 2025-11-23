@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>Interactive Mach–CAS–Altitude Chart (Dark + Lock v6)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            margin: 0;
+            background: #0b0b0b;
+            color: #eee;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            font-size: 1.2rem;
+            margin: 12px 0 4px;
+            text-align: center;
+        }
+        #container {
+            position: relative;
+            overflow: hidden;
+        }
+        #machCanvas {
+            border: 1px solid #333;
+            border-radius: 6px;
+            background: #0d0d0d;
+        }
+        #info {
+            margin-top: 8px;
+            font-size: 0.95rem;
+            text-align: center;
+            min-height: 1.2em;
+        }
+        #legend {
+            margin-top: 4px;
+            font-size: 0.8rem;
+            opacity: 0.8;
+            text-align: center;
+        }
+        #isaControl {
+            margin-top: 6px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        #isaControl span {
+            min-width: 40px;
+            display: inline-block;
+            text-align: left;
+        }
+        input[type="range"] {
+            width: 200px;
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 1rem;
+            }
+            #info {
+                font-size: 0.85rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>גרף Mach–CAS–Altitude אינטראקטיבי (Dark + Lock v6)</h1>
+    <div id="container">
+        <canvas id="machCanvas" width="900" height="550"></canvas>
+    </div>
+    <div id="info">הזז את העכבר או האצבע מעל הגרף, קרוב לאחד מקווי ה-Mach…</div>
+    <div id="legend">
+        טווח: CAS 150–700 קשר, גובה 0–40,000 ft, קווי Mach: 0.6–1.2 בקפיצות 0.1. קליק / הרמת אצבע = נעילה/שחרור.
+    </div>
+    <div id="isaControl">
+        ΔISA (°C):
+        <span id="isaValue">0°C</span>
+        <input type="range" id="isaSlider" min="-20" max="20" value="0">
+    </div>
+
+    <script>
+        // ===== קבועי ISA =====
+        const T0   = 288.15;
+        const P0   = 101325.0;
+        const R    = 287.05287;
+        const G    = 9.80665;
+        const L    = 0.0065;
+        const GAMMA = 1.4;
+        const FT_PER_M = 3.28084;
+
+        // טווחים
+        const CAS_MIN = 150;
+        const CAS_MAX = 700;
+        const ALT_MIN = 0;
+        const ALT_MAX = 40000;
+
+        const machValues = [];
+        for (let m = 0.6; m <= 1.2001; m += 0.1) {
+            machValues.push(parseFloat(m.toFixed(1)));
+        }
+
+        const altStepFt = 2000; // לדגימה לציור
+
+        const canvas = document.getElementById('machCanvas');
+        const ctx = canvas.getContext('2d');
+        const infoDiv = document.getElementById('info');
+        const isaSlider = document.getElementById('isaSlider');
+        const isaValueSpan = document.getElementById('isaValue');
+
+        const marginLeft = 70;
+        const marginRight = 25;
+        const marginTop = 40;
+        const marginBottom = 50;
+
+        let machLinesData = [];
+        let lockedPoint = null;          // {M, cas, altFt}
+        let currentPoint = null;         // הנקודה האחרונה (נעולה או hover)
+        let highlightCasTick = null;
+        let highlightAltTick = null;
+        let isaDeviationC = 0;           // ΔISA °C
+
+        // למגע
+        let lastTouchPos = null;
+
+        // ===== ISA + CAS(M,h) (לפי ISA) =====
+        function isaAtAltitude(hMeters) {
+            let T, p;
+            if (hMeters <= 11000.0) {
+                T = T0 - L * hMeters;
+                p = P0 * Math.pow(T / T0, G / (R * L));
+            } else {
+                const T11 = T0 - L * 11000.0;
+                const p11 = P0 * Math.pow(T11 / T0, G / (R * L));
+                T = T11;
+                p = p11 * Math.exp(-G * (hMeters - 11000.0) / (R * T));
+            }
+            const rho = p / (R * T);
+            const a = Math.sqrt(GAMMA * R * T);
+            return { T, p, rho, a };
+        }
+
+        function casFromMachAndAlt(M, hMeters) {
+            const atm = isaAtAltitude(hMeters);
+            const p = atm.p;
+            const qc = p * (Math.pow(1 + 0.2 * M * M, 3.5) - 1.0);
+            const a0 = Math.sqrt(GAMMA * R * T0);
+            const ptOverP0 = qc / P0 + 1.0;
+            const Vc2 = 5 * a0 * a0 * (Math.pow(ptOverP0, 2.0 / 7.0) - 1.0);
+            const Vc2pos = Math.max(Vc2, 0);
+            const Vc = Math.sqrt(Vc2pos);
+            return Vc / 0.514444;
+        }
+
+        // TAS לפי Mach + גובה + ΔISA
+        function tasFromPoint(point) {
+            if (!point) return null;
+            const altM = point.altFt / FT_PER_M;
+            const atmISA = isaAtAltitude(altM);
+            const T_actual = atmISA.T + isaDeviationC;
+            const a_actual = Math.sqrt(GAMMA * R * T_actual);
+            const tas_ms = point.M * a_actual;
+            const tas_kt = tas_ms / 0.514444;
+            return tas_kt;
+        }
+
+        // פתרון גובה מתוך Mach + CAS (ביסקשן)
+        function findAltitudeForCasAndMach(M, casTarget) {
+            const hMin = ALT_MIN / FT_PER_M;
+            const hMax = ALT_MAX / FT_PER_M;
+
+            function f(h) {
+                return casFromMachAndAlt(M, h) - casTarget;
+            }
+
+            let fMin = f(hMin);
+            let fMax = f(hMax);
+            if (!isFinite(fMin) || !isFinite(fMax) || fMin * fMax > 0) {
+                return null;
+            }
+
+            let lo = hMin;
+            let hi = hMax;
+            for (let i = 0; i < 50; i++) {
+                const mid = 0.5 * (lo + hi);
+                const fMid = f(mid);
+                if (fMin * fMid <= 0) {
+                    hi = mid;
+                    fMax = fMid;
+                } else {
+                    lo = mid;
+                    fMin = fMid;
+                }
+            }
+            return 0.5 * (lo + hi);
+        }
+
+        // מיפוי מסך
+        function xFromCas(cas) {
+            const frac = (cas - CAS_MIN) / (CAS_MAX - CAS_MIN);
+            return marginLeft + frac * (canvas.width - marginLeft - marginRight);
+        }
+
+        function yFromAlt(altFt) {
+            const frac = (altFt - ALT_MIN) / (ALT_MAX - ALT_MIN);
+            return canvas.height - marginBottom - frac * (canvas.height - marginTop - marginBottom);
+        }
+
+        function casFromX(x) {
+            const frac = (x - marginLeft) / (canvas.width - marginLeft - marginRight);
+            return CAS_MIN + frac * (CAS_MAX - CAS_MIN);
+        }
+
+        function altFromY(y) {
+            const frac = (canvas.height - marginBottom - y) / (canvas.height - marginTop - marginBottom);
+            return ALT_MIN + frac * (ALT_MAX - ALT_MIN);
+        }
+
+        // נתונים לציור קווים
+        function buildData() {
+            const altsFt = [];
+            for (let alt = ALT_MIN; alt <= ALT_MAX + 1; alt += altStepFt) {
+                altsFt.push(alt);
+            }
+            machLinesData = [];
+            for (const M of machValues) {
+                const pts = [];
+                for (const altFt of altsFt) {
+                    const altM = altFt / FT_PER_M;
+                    const cas = casFromMachAndAlt(M, altM);
+                    pts.push({ cas, altFt });
+                }
+                machLinesData.push({ M, pts });
+            }
+        }
+
+        // צירים + גריד + טיקים
+        function drawAxesAndGrid() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#0d0d0d";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // גריד אנכי (כל 50 קשר)
+            ctx.strokeStyle = "#333";
+            ctx.lineWidth = 0.9;
+            ctx.setLineDash([2, 4]);
+            ctx.beginPath();
+            for (let cas = 150; cas <= 700; cas += 50) {
+                const x = xFromCas(cas);
+                ctx.moveTo(x, yFromAlt(ALT_MIN));
+                ctx.lineTo(x, yFromAlt(ALT_MAX));
+            }
+            ctx.stroke();
+
+            // גריד אופקי (כל 5,000 ft)
+            ctx.beginPath();
+            for (let alt = 0; alt <= 40000; alt += 5000) {
+                const y = yFromAlt(alt);
+                ctx.moveTo(xFromCas(CAS_MIN), y);
+                ctx.lineTo(xFromCas(CAS_MAX), y);
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // צירי X/Y
+            ctx.strokeStyle = "#aaa";
+            ctx.lineWidth = 1.2;
+            // X
+            ctx.beginPath();
+            ctx.moveTo(xFromCas(CAS_MIN), yFromAlt(ALT_MIN));
+            ctx.lineTo(xFromCas(CAS_MAX), yFromAlt(ALT_MIN));
+            ctx.stroke();
+            // Y
+            ctx.beginPath();
+            ctx.moveTo(xFromCas(CAS_MIN), yFromAlt(ALT_MIN));
+            ctx.lineTo(xFromCas(CAS_MIN), yFromAlt(ALT_MAX));
+            ctx.stroke();
+
+            // ===== טיקים על ציר X =====
+            // טיקים קטנים כל 10 קשר
+            ctx.strokeStyle = "#666";
+            ctx.lineWidth = 0.8;
+            ctx.beginPath();
+            const yAxis = yFromAlt(ALT_MIN);
+            for (let cas = 150; cas <= 700; cas += 10) {
+                const x = xFromCas(cas);
+                const tickLen = (cas % 50 === 0) ? 6 : 3;
+                ctx.moveTo(x, yAxis);
+                ctx.lineTo(x, yAxis + tickLen);
+            }
+            ctx.stroke();
+
+            // מספרים וטיקים ראשיים כל 50 קשר
+            ctx.font = "11px Arial";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "top";
+            for (let cas = 150; cas <= 700; cas += 50) {
+                const x = xFromCas(cas);
+                const yAxisLocal = yFromAlt(ALT_MIN);
+
+                ctx.strokeStyle = "#aaa";
+                ctx.lineWidth = 1.0;
+                ctx.beginPath();
+                ctx.moveTo(x, yAxisLocal);
+                ctx.lineTo(x, yAxisLocal + 6);
+                ctx.stroke();
+
+                if (highlightCasTick !== null && cas === highlightCasTick) {
+                    ctx.fillStyle = "#00E5FF";
+                    ctx.font = "bold 11px Arial";
+                } else {
+                    ctx.fillStyle = "#ddd";
+                    ctx.font = "11px Arial";
+                }
+                ctx.fillText(cas.toString(), x, yAxisLocal + 8);
+            }
+
+            // ===== טיקים על ציר Y =====
+            // טיקים קטנים כל 1000 ft
+            ctx.strokeStyle = "#666";
+            ctx.lineWidth = 0.8;
+            ctx.beginPath();
+            const xAxis = xFromCas(CAS_MIN);
+            for (let alt = 0; alt <= 40000; alt += 1000) {
+                const y = yFromAlt(alt);
+                const tickLen = (alt % 5000 === 0) ? 6 : 3;
+                ctx.moveTo(xAxis - tickLen, y);
+                ctx.lineTo(xAxis, y);
+            }
+            ctx.stroke();
+
+            // מספרים וטיקים ראשיים כל 5000 ft
+            ctx.textAlign = "right";
+            ctx.textBaseline = "middle";
+            for (let alt = 0; alt <= 40000; alt += 5000) {
+                const y = yFromAlt(alt);
+                const xAxisLocal = xFromCas(CAS_MIN);
+
+                ctx.strokeStyle = "#aaa";
+                ctx.lineWidth = 1.0;
+                ctx.beginPath();
+                ctx.moveTo(xAxisLocal - 6, y);
+                ctx.lineTo(xAxisLocal, y);
+                ctx.stroke();
+
+                if (highlightAltTick !== null && alt === highlightAltTick) {
+                    ctx.fillStyle = "#00E5FF";
+                    ctx.font = "bold 11px Arial";
+                } else {
+                    ctx.fillStyle = "#ddd";
+                    ctx.font = "11px Arial";
+                }
+                ctx.fillText(alt.toString(), xAxisLocal - 8, y);
+            }
+
+            // כותרות צירים
+            ctx.fillStyle = "#eee";
+            ctx.font = "13px Arial";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "top";
+            ctx.fillText("CAS [kt]", (xFromCas(CAS_MIN) + xFromCas(CAS_MAX)) / 2, canvas.height - marginBottom + 20);
+
+            ctx.save();
+            ctx.translate(20, (yFromAlt(ALT_MIN) + yFromAlt(ALT_MAX)) / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.textAlign = "center";
+            ctx.textBaseline = "bottom";
+            ctx.fillText("Altitude [ft]", 0, 0);
+            ctx.restore();
+
+            // כותרת עליונה
+            ctx.font = "16px Arial";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "top";
+            ctx.fillText("Mach–CAS–Altitude (Interactive Dark + Lock v6)", canvas.width / 2, 8);
+        }
+
+        // קווי Mach
+        function drawMachLines(highlightMach) {
+            const colors = ["#4FC3F7","#29B6F6","#03A9F4","#0288D1","#0277BD","#01579B","#81D4FA"];
+            for (let i = 0; i < machLinesData.length; i++) {
+                const line = machLinesData[i];
+                const pts = line.pts;
+                const color = colors[i % colors.length];
+
+                ctx.beginPath();
+                for (let j = 0; j < pts.length; j++) {
+                    const x = xFromCas(pts[j].cas);
+                    const y = yFromAlt(pts[j].altFt);
+                    if (j === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                if (highlightMach != null && Math.abs(line.M - highlightMach) < 1e-6) {
+                    ctx.strokeStyle = "#FFFFFF";
+                    ctx.lineWidth = 2.0;
+                } else {
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = 1.4;
+                }
+                ctx.stroke();
+            }
+
+            // תוויות Mach למעלה
+            const labelAltFt = 36000;
+            ctx.font = "11px Arial";
+            ctx.fillStyle = "#BBDEFB";
+            ctx.textAlign = "left";
+            ctx.textBaseline = "middle";
+
+            for (let i = 0; i < machLinesData.length; i++) {
+                const line = machLinesData[i];
+                const casLabel = casFromMachAndAlt(line.M, labelAltFt / FT_PER_M);
+                const xLabel = xFromCas(casLabel);
+                const yLabel = yFromAlt(labelAltFt) - 8;
+
+                ctx.save();
+                ctx.translate(xLabel, yLabel);
+                ctx.rotate(-Math.PI / 4);
+                ctx.fillText(line.M.toFixed(1) + "M", 0, 0);
+                ctx.restore();
+            }
+        }
+
+        // בועת טקסט ליד הנקודה – Mach | CAS | Alt | TAS | ISA
+        function drawPointLabel(point) {
+            if (!point) return;
+
+            const M   = Number(point.M);
+            const cas = Number(point.cas);
+            const alt = Number(point.altFt);
+
+            if (!isFinite(M) || !isFinite(cas) || !isFinite(alt)) {
+                console.warn("drawPointLabel: point לא תקין", point);
+                return;
+            }
+
+            const x = xFromCas(cas);
+            const y = yFromAlt(alt);
+
+            const tas = tasFromPoint({ M: M, altFt: alt });
+            const tasStr = tas ? tas.toFixed(1) : "N/A";
+            const deltaStr = (isaDeviationC > 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
+
+            const text = `${M.toFixed(2)}M | ${cas.toFixed(1)} kt CAS | ${alt.toFixed(0)} ft | ${tasStr} kt TAS | ISA${deltaStr}`;
+
+            ctx.font = "12px Arial";
+            const paddingX = 7;
+            const paddingY = 5;
+            const textWidth = ctx.measureText(text).width;
+
+            let boxX = x + 10;
+            let boxY = y - 12;
+
+            if (boxX + textWidth + 2 * paddingX > canvas.width - marginRight) {
+                boxX = x - 10 - (textWidth + 2 * paddingX);
+            }
+
+            ctx.fillStyle = "rgba(0,0,0,0.85)";
+            ctx.strokeStyle = "#00E5FF";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.rect(boxX, boxY - paddingY, textWidth + 2 * paddingX, 2 * paddingY + 14);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = "#E1F5FE";
+            ctx.textAlign = "left";
+            ctx.textBaseline = "top";
+            ctx.fillText(text, boxX + paddingX, boxY - paddingY + 3);
+        }
+
+        // רינדור מלא
+        function redraw(point) {
+            currentPoint = point || null;
+            drawAxesAndGrid();
+            drawMachLines(point ? point.M : null);
+
+            if (point) {
+                const x = xFromCas(point.cas);
+                const y = yFromAlt(point.altFt);
+
+                ctx.strokeStyle = "#888";
+                ctx.lineWidth = 1;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.moveTo(x, yFromAlt(ALT_MIN));
+                ctx.lineTo(x, yFromAlt(ALT_MAX));
+                ctx.moveTo(xFromCas(CAS_MIN), y);
+                ctx.lineTo(xFromCas(CAS_MAX), y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                ctx.fillStyle = lockedPoint ? "#FF5252" : "#FFEB3B";
+                ctx.beginPath();
+                ctx.arc(x, y, 4.5, 0, 2 * Math.PI);
+                ctx.fill();
+
+                drawPointLabel(point);
+            }
+        }
+
+        // מציאת קו Mach הקרוב + סנאפ ל-10 קשר
+        function findNearestOnLines(mouseX, mouseY) {
+            const thresholdPx = 12;
+
+            let bestLine = null;
+            let bestDist = Infinity;
+            for (const line of machLinesData) {
+                for (const pt of line.pts) {
+                    const px = xFromCas(pt.cas);
+                    const py = yFromAlt(pt.altFt);
+                    const dx = px - mouseX;
+                    const dy = py - mouseY;
+                    const d2 = dx * dx + dy * dy;
+                    if (d2 < bestDist) {
+                        bestDist = d2;
+                        bestLine = line;
+                    }
+                }
+            }
+
+            if (!bestLine || Math.sqrt(bestDist) > thresholdPx) {
+                return null;
+            }
+
+            // סנאפ ל-10 קשר לפי CAS מהמיקום האופקי
+            let rawCas = casFromX(mouseX);
+            let snappedCas = Math.round(rawCas / 10) * 10;
+            if (snappedCas < CAS_MIN) snappedCas = CAS_MIN;
+            if (snappedCas > CAS_MAX) snappedCas = CAS_MAX;
+
+            const hM = findAltitudeForCasAndMach(bestLine.M, snappedCas);
+            if (hM === null) {
+                return null;
+            }
+            const altFt = hM * FT_PER_M;
+
+            return { M: bestLine.M, cas: snappedCas, altFt: altFt };
+        }
+
+        // === לוגיקת "תנועה" (משותפת לעכבר וטאצ') ===
+        function handlePointerMove(mx, my) {
+            if (lockedPoint) {
+                highlightCasTick = Math.round(lockedPoint.cas / 50) * 50;
+                highlightAltTick = Math.round(lockedPoint.altFt / 5000) * 5000;
+                redraw(lockedPoint);
+                const tas = tasFromPoint(lockedPoint);
+                const tasStr = tas ? tas.toFixed(1) : "N/A";
+                const deltaStr = (isaDeviationC > 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
+                infoDiv.textContent =
+                    `LOCKED → Mach ${lockedPoint.M.toFixed(2)} | CAS ${lockedPoint.cas.toFixed(1)} kt | Alt ${lockedPoint.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
+                return;
+            }
+
+            if (mx < marginLeft || mx > canvas.width - marginRight ||
+                my < marginTop || my > canvas.height - marginBottom) {
+                highlightCasTick = null;
+                highlightAltTick = null;
+                redraw(null);
+                infoDiv.textContent = "הזז את העכבר או האצבע מעל הגרף, קרוב לאחד מקווי ה-Mach…";
+                return;
+            }
+
+            const nearest = findNearestOnLines(mx, my);
+            if (nearest) {
+                highlightCasTick = Math.round(nearest.cas / 50) * 50;
+                highlightAltTick = Math.round(nearest.altFt / 5000) * 5000;
+                redraw(nearest);
+                const tas = tasFromPoint(nearest);
+                const tasStr = tas ? tas.toFixed(1) : "N/A";
+                const deltaStr = (isaDeviationC > 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
+                infoDiv.textContent =
+                    `Mach ${nearest.M.toFixed(2)} | CAS ${nearest.cas.toFixed(1)} kt | Alt ${nearest.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
+            } else {
+                highlightCasTick = null;
+                highlightAltTick = null;
+                redraw(null);
+                const casApprox = casFromX(mx).toFixed(0);
+                const altApprox = altFromY(my).toFixed(0);
+                infoDiv.textContent =
+                    `לא על קו Mach. בערך: CAS ≈ ${casApprox} kt, Alt ≈ ${altApprox} ft`;
+            }
+        }
+
+        // === לוגיקת "קליק/נעילה" (משותפת לעכבר וטאצ') ===
+        function handlePointerClick(mx, my) {
+            if (lockedPoint) {
+                lockedPoint = null;
+                highlightCasTick = null;
+                highlightAltTick = null;
+                redraw(null);
+                infoDiv.textContent = "נעילה בוטלה. הזז את העכבר או האצבע מעל הגרף…";
+                return;
+            }
+
+            if (mx < marginLeft || mx > canvas.width - marginRight ||
+                my < marginTop || my > canvas.height - marginBottom) {
+                return;
+            }
+
+            const nearest = findNearestOnLines(mx, my);
+            if (nearest) {
+                lockedPoint = nearest;
+                highlightCasTick = Math.round(lockedPoint.cas / 50) * 50;
+                highlightAltTick = Math.round(lockedPoint.altFt / 5000) * 5000;
+                redraw(lockedPoint);
+                const tas = tasFromPoint(lockedPoint);
+                const tasStr = tas ? tas.toFixed(1) : "N/A";
+                const deltaStr = (isaDeviationC > 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
+                infoDiv.textContent =
+                    `LOCKED → Mach ${lockedPoint.M.toFixed(2)} | CAS ${lockedPoint.cas.toFixed(1)} kt | Alt ${lockedPoint.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
+            }
+        }
+
+        // === אירועי עכבר ===
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+            handlePointerMove(mx, my);
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            if (lockedPoint) {
+                highlightCasTick = Math.round(lockedPoint.cas / 50) * 50;
+                highlightAltTick = Math.round(lockedPoint.altFt / 5000) * 5000;
+                redraw(lockedPoint);
+                const tas = tasFromPoint(lockedPoint);
+                const tasStr = tas ? tas.toFixed(1) : "N/A";
+                const deltaStr = (isaDeviationC > 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
+                infoDiv.textContent =
+                    `LOCKED → Mach ${lockedPoint.M.toFixed(2)} | CAS ${lockedPoint.cas.toFixed(1)} kt | Alt ${lockedPoint.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
+            } else {
+                highlightCasTick = null;
+                highlightAltTick = null;
+                redraw(null);
+                infoDiv.textContent = "הזז את העכבר או האצבע מעל הגרף, קרוב לאחד מקווי ה-Mach…";
+            }
+        });
+
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+            handlePointerClick(mx, my);
+        });
+
+        // === אירועי טאצ' למובייל ===
+        canvas.addEventListener('touchstart', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            const mx = touch.clientX - rect.left;
+            const my = touch.clientY - rect.top;
+            lastTouchPos = { x: mx, y: my };
+            handlePointerMove(mx, my);
+        }, { passive: true });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            const mx = touch.clientX - rect.left;
+            const my = touch.clientY - rect.top;
+            lastTouchPos = { x: mx, y: my };
+            handlePointerMove(mx, my);
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', () => {
+            if (lastTouchPos) {
+                handlePointerClick(lastTouchPos.x, lastTouchPos.y);
+                lastTouchPos = null;
+            }
+        });
+
+        // === API חיצוני: highlightMachCasAlt(M, cas, altFt) ===
+        window.highlightMachCasAlt = function(M, cas, altFt) {
+            const mNum   = Number(M);
+            const casNum = Number(cas);
+
+            if (!isFinite(mNum) || !isFinite(casNum)) {
+                console.warn("highlightMachCasAlt: Mach או CAS לא מספרים תקינים", M, cas);
+                return;
+            }
+
+            let useAltFt = altFt;
+            if (!isFinite(useAltFt)) {
+                const hM = findAltitudeForCasAndMach(mNum, casNum);
+                if (hM === null) {
+                    console.warn("highlightMachCasAlt: לא נמצא גובה עבור השילוב הזה (Mach/CAS)", mNum, casNum);
+                    return;
+                }
+                useAltFt = hM * FT_PER_M;
+            }
+
+            const altNum = Number(useAltFt);
+            if (!isFinite(altNum)) {
+                console.warn("highlightMachCasAlt: Altitude לא תקין", useAltFt);
+                return;
+            }
+
+            lockedPoint = { M: mNum, cas: casNum, altFt: altNum };
+            highlightCasTick = Math.round(casNum / 50) * 50;
+            highlightAltTick = Math.round(altNum / 5000) * 5000;
+            redraw(lockedPoint);
+
+            const tas = tasFromPoint(lockedPoint);
+            const tasStr = tas ? tas.toFixed(1) : "N/A";
+            const deltaStr = (isaDeviationC > 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
+            infoDiv.textContent =
+                `LOCKED (API) → Mach ${mNum.toFixed(2)} | CAS ${casNum.toFixed(1)} kt | Alt ${altNum.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
+        };
+
+        // שליטה ב-ΔISA
+        isaSlider.addEventListener('input', () => {
+            isaDeviationC = parseInt(isaSlider.value, 10) || 0;
+            const sign = isaDeviationC > 0 ? "+" : "";
+            isaValueSpan.textContent = `${sign}${isaDeviationC}°C`;
+
+            if (currentPoint) {
+                if (lockedPoint) {
+                    highlightCasTick = Math.round(lockedPoint.cas / 50) * 50;
+                    highlightAltTick = Math.round(lockedPoint.altFt / 5000) * 5000;
+                    redraw(lockedPoint);
+                    const tas = tasFromPoint(lockedPoint);
+                    const tasStr = tas ? tas.toFixed(1) : "N/A";
+                    const deltaStr = (isaDeviationC > 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
+                    infoDiv.textContent =
+                        `LOCKED → Mach ${lockedPoint.M.toFixed(2)} | CAS ${lockedPoint.cas.toFixed(1)} kt | Alt ${lockedPoint.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
+                } else {
+                    highlightCasTick = Math.round(currentPoint.cas / 50) * 50;
+                    highlightAltTick = Math.round(currentPoint.altFt / 5000) * 5000;
+                    redraw(currentPoint);
+                    const tas = tasFromPoint(currentPoint);
+                    const tasStr = tas ? tas.toFixed(1) : "N/A";
+                    const deltaStr = (isaDeviationC > 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
+                    infoDiv.textContent =
+                        `Mach ${currentPoint.M.toFixed(2)} | CAS ${currentPoint.cas.toFixed(1)} kt | Alt ${currentPoint.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
+                }
+            } else {
+                highlightCasTick = null;
+                highlightAltTick = null;
+                redraw(null);
+            }
+        });
+
+        // התחלה
+        buildData();
+        redraw(null);
+    </script>
+</body>
+</html>
