@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl">
+<html lang="en" dir="ltr">
 <head>
     <meta charset="UTF-8">
     <title>Aeronautical Calculator – Mach · CAS · Altitude</title>
@@ -36,7 +36,7 @@
         h1 {
             font-size: 1.5rem;
             margin: 8px 0 4px;
-            text-align: right;
+            text-align: left;
             width: 100%;
             max-width: 960px;
         }
@@ -47,6 +47,7 @@
             font-size: 0.85rem;
             color: var(--text-muted);
             margin-bottom: 10px;
+            text-align: left;
         }
 
         /* ===== Card ===== */
@@ -104,7 +105,7 @@
         .solve-label {
             font-size: 0.8rem;
             color: var(--text-muted);
-            text-align: left;
+            text-align: right;
         }
 
         /* ===== Tabs ===== */
@@ -158,7 +159,7 @@
 
         .form-row {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) 260px;
+            grid-template-columns: 260px minmax(0, 1fr);
             gap: 12px;
             align-items: center;
         }
@@ -172,13 +173,12 @@
         .input-wrapper {
             display: flex;
             align-items: center;
-            justify-content: flex-end;
-            gap: 6px;
-            direction: ltr; /* סדר משמאל לימין בתוך השורה */
+            justify-content: flex-start;
+            gap: 8px;
         }
 
         .field {
-            width: 100px;
+            width: 110px;
             padding: 7px 10px;
             border-radius: 10px;
             border: 1px solid var(--border-subtle);
@@ -208,7 +208,7 @@
             text-align: left;
         }
 
-        /* spin buttons – מחוץ לשדה */
+        /* spin buttons – outside input */
         .spin-buttons {
             display: flex;
             flex-direction: column;
@@ -346,14 +346,14 @@
                 grid-template-columns: 1fr;
             }
             .solve-label {
-                text-align: left;
+                text-align: right;
             }
         }
     </style>
 </head>
 <body>
-    <h1>Aeronautical Calculator</h1>
-    <div class="subtitle">CAS · Mach · Altitude – מחשבון אווירי + גרף אינטראקטיבי</div>
+    <!-- <h1>Aeronautical Calculator</h1>
+    <div class="subtitle">CAS · Mach · Altitude – מחשבון אווירי + גרף אינטראקטיבי</div> -->
 
     <div class="card">
         <div class="card-header">
@@ -361,10 +361,10 @@
                 <div class="icon-circle">✈️</div>
                 <div>
                     <div class="title-main">Aeronautical Calculator</div>
-                    <div class="title-sub">CAS · Mach · Altitude · TAS · ΔISA</div>
+                    <div class="title-sub">CAS · Mach · Altitude</div>
                 </div>
             </div>
-            <div class="solve-label">בחר פרמטר לחישוב (חופשי):</div>
+            <div class="solve-label">בחר פרמטר לחישוב, פרינצי:</div>
         </div>
 
         <!-- Tabs -->
@@ -383,9 +383,9 @@
         <!-- Input rows -->
         <div class="form-rows">
             <div class="form-row">
-                <div class="form-label">Calibrated Airspeed (CAS)</div>
+                <div class="form-label">Calibrated Airspeed (CAS):</div>
                 <div class="input-wrapper">
-                    <!-- משמאל: חיצים, באמצע: שדה, ימינה: יחידות -->
+                    <!-- left: arrows, middle: input, right: unit -->
                     <div class="spin-buttons" data-target="casInput" data-step="10" data-min="0" data-max="700">
                         <button type="button" class="spin-up">▲</button>
                         <button type="button" class="spin-down">▼</button>
@@ -396,7 +396,7 @@
             </div>
 
             <div class="form-row">
-                <div class="form-label">Mach Number</div>
+                <div class="form-label">Mach Number:</div>
                 <div class="input-wrapper">
                     <div class="spin-buttons" data-target="machInput" data-step="0.01" data-min="0" data-max="2">
                         <button type="button" class="spin-up">▲</button>
@@ -408,7 +408,7 @@
             </div>
 
             <div class="form-row">
-                <div class="form-label">Altitude</div>
+                <div class="form-label">Altitude:</div>
                 <div class="input-wrapper">
                     <div class="spin-buttons" data-target="altInput" data-step="1000" data-min="0" data-max="50000">
                         <button type="button" class="spin-up">▲</button>
@@ -420,10 +420,13 @@
             </div>
 
             <div class="form-row">
-                <div class="form-label">ΔISA (temperature deviation)</div>
+                <div class="form-label">ISA deviation (ΔISA):</div>
                 <div class="input-wrapper">
-                    <!-- אין חיצים, רק שדה + יחידות -->
-                    <input id="isaInput" type="number" step="1" value="0" class="field">
+                    <div class="spin-buttons" data-target="isaInput" data-step="1" data-min="-20" data-max="20">
+                        <button type="button" class="spin-up">▲</button>
+                        <button type="button" class="spin-down">▼</button>
+                    </div>
+                    <input id="isaInput" type="text" value="ISA+0" class="field">
                     <span class="unit">°C</span>
                 </div>
             </div>
@@ -432,34 +435,31 @@
         <div class="card-footer">
             <button id="solveButton" class="primary-btn">
                 <span class="icon">🧮</span>
-                <span>חישוב & הצגה על הגרף</span>
+                <span>ברשותך, ממריא בלי אישור</span>
             </button>
 
             <button id="resetButton" class="reset-btn">Reset</button>
 
-            <div class="helper-text">
-                ברשותך, מחשב בלי אישור 😄
-            </div>
         </div>
 
         <div id="calcResult" class="result-box">
-            תוצאה תוצג כאן…
+            Result will appear here…
         </div>
     </div>
 
-    <!-- גרף -->
+    <!-- Graph -->
     <div id="container">
         <canvas id="machCanvas"></canvas>
     </div>
-    <div id="info">הזז את העכבר או האצבע מעל הגרף, קרוב לאחד מקווי ה-Mach…</div>
+    <!-- <div id="info">Move mouse or finger near a Mach line…</div>
     <div id="legend">
-        טווח: CAS 150–700 קשר, גובה 0–40,000 ft. הגרף תמיד מוצג בטווח המלא לרוחב, מותאם למסך סמארטפון.
+        Range: CAS 150–700 kt, Alt 0–40,000 ft. Graph always uses full horizontal range, phone-friendly.
     </div>
     <div id="isaControl">
         ΔISA (°C):
-        <span id="isaValue">0°C</span>
+        <span id="isaValue">+0°C</span>
         <input type="range" id="isaSlider" min="-20" max="20" value="0">
-    </div>
+    </div> -->
 
     <script>
         // ===== ISA constants =====
@@ -502,13 +502,31 @@
         let isaDeviationC = 0;
         let lastTouchPos = null;
 
-        // טווח CAS מוצג – עכשיו קבוע על טווח מלא
         let viewCasMin = CAS_MIN;
         let viewCasMax = CAS_MAX;
 
         let calcMode = "solveAlt";
 
-        // ===== ISA & CAS/Mach helpers =====
+        // ===== helpers for ISA text =====
+        function setIsaFieldFromValue(val) {
+            const input = document.getElementById('isaInput');
+            const sign = val >= 0 ? "+" : "";
+            input.value = `ISA${sign}${val}`;
+        }
+
+        function parseIsaInput(str) {
+            if (!str) return 0;
+            let s = String(str).trim().toUpperCase();
+            s = s.replace(/^ISA/, "");   // remove "ISA" if present
+            s = s.trim();
+            if (s === "") return 0;
+            // keep + / - ; e.g. "+5", "-3", "0"
+            const v = parseFloat(s);
+            if (isNaN(v)) return NaN;
+            return v;
+        }
+
+        // ===== ISA & CAS/Mach =====
         function isaAtAltitude(hMeters) {
             let T, p;
             if (hMeters <= 11000.0) {
@@ -607,7 +625,7 @@
             return 0.5 * (lo + hi);
         }
 
-        // ===== Mapping (עם viewCasMin/Max קבועים) =====
+        // ===== mapping =====
         function xFromCas(cas) {
             const frac = (cas - viewCasMin) / (viewCasMax - viewCasMin);
             return marginLeft + frac * (canvas.width - marginLeft - marginRight);
@@ -655,25 +673,25 @@
             machLinesData.push(buildMachLineData(mNum));
         }
 
+        // ===== axes & grid =====
         function drawAxesAndGrid() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = "#020617";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // grid vertical
+            // vertical grid
             ctx.strokeStyle = "#1f2937";
             ctx.lineWidth = 0.9;
             ctx.setLineDash([2, 4]);
             ctx.beginPath();
             for (let cas = CAS_MIN; cas <= CAS_MAX; cas += 50) {
-                if (cas < viewCasMin || cas > viewCasMax) continue;
                 const x = xFromCas(cas);
                 ctx.moveTo(x, yFromAlt(ALT_MIN));
                 ctx.lineTo(x, yFromAlt(ALT_MAX));
             }
             ctx.stroke();
 
-            // grid horizontal
+            // horizontal grid
             ctx.beginPath();
             for (let alt = 0; alt <= 40000; alt += 5000) {
                 const y = yFromAlt(alt);
@@ -702,7 +720,6 @@
             ctx.beginPath();
             const yAxis = yFromAlt(ALT_MIN);
             for (let cas = CAS_MIN; cas <= CAS_MAX; cas += 10) {
-                if (cas < viewCasMin || cas > viewCasMax) continue;
                 const x = xFromCas(cas);
                 const tickLen = (cas % 50 === 0) ? 6 : 3;
                 ctx.moveTo(x, yAxis);
@@ -714,7 +731,6 @@
             ctx.textAlign = "center";
             ctx.textBaseline = "top";
             for (let cas = CAS_MIN; cas <= CAS_MAX; cas += 50) {
-                if (cas < viewCasMin || cas > viewCasMax) continue;
                 const x = xFromCas(cas);
                 const yAxisLocal = yFromAlt(ALT_MIN);
 
@@ -833,7 +849,6 @@
             for (let i = 0; i < machLinesData.length; i++) {
                 const line = machLinesData[i];
                 const casLabel = casFromMachAndAlt(line.M, labelAltFt / FT_PER_M);
-                if (casLabel < viewCasMin || casLabel > viewCasMax) continue;
                 const xLabel = xFromCas(casLabel);
                 const yLabel = yFromAlt(labelAltFt) - 8;
 
@@ -858,7 +873,7 @@
 
             const tas = tasFromPoint({ M: M, altFt: alt });
             const tasStr = tas ? tas.toFixed(1) : "N/A";
-            const deltaStr = (isaDeviationC > 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
+            const deltaStr = (isaDeviationC >= 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
 
             const text = `${M.toFixed(2)}M | ${cas.toFixed(1)} kt CAS | ${alt.toFixed(0)} ft | ${tasStr} kt TAS | ISA${deltaStr}`;
 
@@ -926,7 +941,6 @@
             for (const line of machLinesData) {
                 for (const pt of line.pts) {
                     const cas = pt.cas;
-                    if (cas < viewCasMin || cas > viewCasMax) continue;
                     const px = xFromCas(cas);
                     const py = yFromAlt(pt.altFt);
                     const dx = px - mx;
@@ -960,7 +974,7 @@
                 redraw(lockedPoint);
                 const tas = tasFromPoint(lockedPoint);
                 const tasStr = tas ? tas.toFixed(1) : "N/A";
-                const deltaStr = (isaDeviationC > 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
+                const deltaStr = (isaDeviationC >= 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
                 infoDiv.textContent =
                     `LOCKED → Mach ${lockedPoint.M.toFixed(2)} | CAS ${lockedPoint.cas.toFixed(1)} kt | Alt ${lockedPoint.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
                 return;
@@ -971,7 +985,7 @@
                 highlightCasTick = null;
                 highlightAltTick = null;
                 redraw(null);
-                infoDiv.textContent = "הזז את העכבר או האצבע מעל הגרף, קרוב לאחד מקווי ה-Mach…";
+                infoDiv.textContent = "Move mouse or finger near a Mach line…";
                 return;
             }
 
@@ -982,7 +996,7 @@
                 redraw(nearest);
                 const tas = tasFromPoint(nearest);
                 const tasStr = tas ? tas.toFixed(1) : "N/A";
-                const deltaStr = (isaDeviationC > 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
+                const deltaStr = (isaDeviationC >= 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
                 infoDiv.textContent =
                     `Mach ${nearest.M.toFixed(2)} | CAS ${nearest.cas.toFixed(1)} kt | Alt ${nearest.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
             } else {
@@ -992,7 +1006,7 @@
                 const casApprox = casFromX(mx).toFixed(0);
                 const altApprox = altFromY(my).toFixed(0);
                 infoDiv.textContent =
-                    `לא על קו Mach. בערך: CAS ≈ ${casApprox} kt, Alt ≈ ${altApprox} ft`;
+                    `Not on a Mach line. Approx: CAS ≈ ${casApprox} kt, Alt ≈ ${altApprox} ft`;
             }
         }
 
@@ -1002,7 +1016,7 @@
                 highlightCasTick = null;
                 highlightAltTick = null;
                 redraw(null);
-                infoDiv.textContent = "נעילה בוטלה. הזז את העכבר או האצבע מעל הגרף…";
+                infoDiv.textContent = "Lock released. Move mouse or finger near a Mach line…";
                 return;
             }
 
@@ -1017,7 +1031,7 @@
                 redraw(lockedPoint);
                 const tas = tasFromPoint(lockedPoint);
                 const tasStr = tas ? tas.toFixed(1) : "N/A";
-                const deltaStr = (isaDeviationC > 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
+                const deltaStr = (isaDeviationC >= 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
                 infoDiv.textContent =
                     `LOCKED → Mach ${lockedPoint.M.toFixed(2)} | CAS ${lockedPoint.cas.toFixed(1)} kt | Alt ${lockedPoint.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
             }
@@ -1037,14 +1051,14 @@
                 redraw(lockedPoint);
                 const tas = tasFromPoint(lockedPoint);
                 const tasStr = tas ? tas.toFixed(1) : "N/A";
-                const deltaStr = (isaDeviationC > 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
+                const deltaStr = (isaDeviationC >= 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
                 infoDiv.textContent =
                     `LOCKED → Mach ${lockedPoint.M.toFixed(2)} | CAS ${lockedPoint.cas.toFixed(1)} kt | Alt ${lockedPoint.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
             } else {
                 highlightCasTick = null;
                 highlightAltTick = null;
                 redraw(null);
-                infoDiv.textContent = "הזז את העכבר או האצבע מעל הגרף, קרוב לאחד מקווי ה-Mach…";
+                infoDiv.textContent = "Move mouse or finger near a Mach line…";
             }
         });
 
@@ -1087,7 +1101,7 @@
             const casNum = Number(cas);
 
             if (!isFinite(mNum) || !isFinite(casNum)) {
-                console.warn("highlightMachCasAlt: Mach או CAS לא מספרים תקינים", M, cas);
+                console.warn("highlightMachCasAlt: bad Mach/CAS", M, cas);
                 return;
             }
 
@@ -1097,7 +1111,7 @@
             if (!isFinite(useAltFt)) {
                 const hM = findAltitudeForCasAndMach(mNum, casNum);
                 if (hM === null) {
-                    console.warn("highlightMachCasAlt: לא נמצא גובה עבור השילוב הזה (Mach/CAS)", mNum, casNum);
+                    console.warn("highlightMachCasAlt: no altitude solution", mNum, casNum);
                     return;
                 }
                 useAltFt = hM * FT_PER_M;
@@ -1105,7 +1119,7 @@
 
             const altNum = Number(useAltFt);
             if (!isFinite(altNum)) {
-                console.warn("highlightMachCasAlt: Altitude לא תקין", useAltFt);
+                console.warn("highlightMachCasAlt: bad altitude", useAltFt);
                 return;
             }
 
@@ -1116,22 +1130,24 @@
 
             const tas = tasFromPoint(lockedPoint);
             const tasStr = tas ? tas.toFixed(1) : "N/A";
-            const deltaStr = (isaDeviationC > 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
+            const deltaStr = (isaDeviationC >= 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
             infoDiv.textContent =
                 `LOCKED (API) → Mach ${mNum.toFixed(2)} | CAS ${casNum.toFixed(1)} kt | Alt ${altNum.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
         };
 
-        // חישוב מתוך הפאנל
+        // panel calc
         function runAeroCalcFromPanel() {
             let M   = parseFloat(document.getElementById('machInput').value);
             let cas = parseFloat(document.getElementById('casInput').value);
             let alt = parseFloat(document.getElementById('altInput').value);
-            let dIsa = parseFloat(document.getElementById('isaInput').value);
+            let dIsa = parseIsaInput(document.getElementById('isaInput').value);
 
             if (isNaN(dIsa)) dIsa = 0;
             isaDeviationC = dIsa;
-            const sign = dIsa > 0 ? "+" : "";
-            isaValueSpan.textContent = `${sign}${dIsa.toFixed(0)}°C`;
+            const sign = dIsa >= 0 ? "+" : "";
+            isaValueSpan.textContent = `${sign}${dIsa}°C`;
+            setIsaFieldFromValue(dIsa);
+            isaSlider.value = dIsa;
 
             let solvedM = M;
             let solvedCas = cas;
@@ -1139,12 +1155,12 @@
 
             if (calcMode === "solveMach") {
                 if (!isFinite(cas) || !isFinite(alt)) {
-                    alert("במצב 'MACH' חייבים להזין CAS ו-Alt");
+                    alert("Mach mode: please enter CAS and Alt");
                     return;
                 }
                 const mRes = solveMachGivenCasAlt(cas, alt);
                 if (mRes === null) {
-                    alert("לא נמצא פתרון Mach עבור השילוב הזה");
+                    alert("No Mach solution for this combination");
                     return;
                 }
                 solvedM = mRes;
@@ -1153,7 +1169,7 @@
                 document.getElementById('machInput').value = solvedM.toFixed(3);
             } else if (calcMode === "solveCas") {
                 if (!isFinite(M) || !isFinite(alt)) {
-                    alert("במצב 'CAS' חייבים להזין Mach ו-Alt");
+                    alert("CAS mode: please enter Mach and Alt");
                     return;
                 }
                 const altM = alt / FT_PER_M;
@@ -1162,14 +1178,14 @@
                 solvedCas = casRes;
                 solvedAlt = alt;
                 document.getElementById('casInput').value = solvedCas.toFixed(1);
-            } else if (calcMode === "solveAlt") {
+            } else { // solveAlt
                 if (!isFinite(M) || !isFinite(cas)) {
-                    alert("במצב 'ALT' חייבים להזין Mach ו-CAS");
+                    alert("Alt mode: please enter Mach and CAS");
                     return;
                 }
                 const hM = findAltitudeForCasAndMach(M, cas);
                 if (hM === null) {
-                    alert("לא נמצא גובה עבור השילוב הזה");
+                    alert("No altitude solution for this combination");
                     return;
                 }
                 solvedM = M;
@@ -1179,14 +1195,14 @@
             }
 
             if (!isFinite(solvedM) || !isFinite(solvedCas) || !isFinite(solvedAlt)) {
-                alert("שילוב תוצאה לא תקין");
+                alert("Invalid solution");
                 return;
             }
 
             const pointForTas = { M: solvedM, altFt: solvedAlt };
             const tasVal = tasFromPoint(pointForTas);
             const tasStr = tasVal ? tasVal.toFixed(1) : "N/A";
-            const dIsaStr = (dIsa > 0 ? "+" : "") + dIsa.toFixed(0) + "°C";
+            const dIsaStr = (dIsa >= 0 ? "+" : "") + dIsa.toFixed(0) + "°C";
 
             const resDiv = document.getElementById('calcResult');
             resDiv.innerHTML =
@@ -1235,21 +1251,21 @@
             document.getElementById('casInput').value = 350;
             document.getElementById('machInput').value = 0.80;
             document.getElementById('altInput').value = 23000;
-            document.getElementById('isaInput').value = 0;
             isaDeviationC = 0;
+            setIsaFieldFromValue(0);
             isaSlider.value = 0;
-            isaValueSpan.textContent = "0°C";
+            isaValueSpan.textContent = "+0°C";
             lockedPoint = null;
             currentPoint = null;
             highlightCasTick = null;
             highlightAltTick = null;
-            document.getElementById('calcResult').textContent = "תוצאה תוצג כאן…";
+            document.getElementById('calcResult').textContent = "Result will appear here…";
             redraw(null);
-            infoDiv.textContent = "הזז את העכבר או האצבע מעל הגרף, קרוב לאחד מקווי ה-Mach…";
+            infoDiv.textContent = "Move mouse or finger near a Mach line…";
             setCalcMode("solveAlt");
         }
 
-        // התאמת קנבס – תמיד לאורך
+        // canvas size – vertical layout
         function resizeCanvas() {
             const container = document.getElementById('container');
             const maxWidth = 600;
@@ -1263,7 +1279,7 @@
 
         window.addEventListener('resize', resizeCanvas);
 
-        // spin buttons
+        // spin buttons (including ISA special formatting)
         function attachSpinButtons() {
             document.querySelectorAll('.spin-buttons').forEach(spin => {
                 const targetId = spin.dataset.target;
@@ -1273,15 +1289,38 @@
                 const input = document.getElementById(targetId);
                 if (!input) return;
 
-                function adjust(sign) {
-                    let v = parseFloat(input.value);
-                    if (isNaN(v)) v = 0;
-                    v += sign * step;
+                const isIsaField = (targetId === 'isaInput');
+
+                function getVal() {
+                    if (isIsaField) {
+                        const v = parseIsaInput(input.value);
+                        return isNaN(v) ? 0 : v;
+                    } else {
+                        let v = parseFloat(input.value);
+                        if (isNaN(v)) v = 0;
+                        return v;
+                    }
+                }
+
+                function setVal(v) {
                     if (min !== null && v < min) v = min;
                     if (max !== null && v > max) v = max;
 
-                    if (step >= 1) input.value = v.toFixed(0);
-                    else input.value = v.toFixed(2);
+                    if (isIsaField) {
+                        isaDeviationC = v;
+                        setIsaFieldFromValue(v);
+                        isaSlider.value = v;
+                        const sign = v >= 0 ? "+" : "";
+                        isaValueSpan.textContent = `${sign}${v}°C`;
+                    } else {
+                        input.value = step >= 1 ? v.toFixed(0) : v.toFixed(2);
+                    }
+                }
+
+                function adjust(sign) {
+                    let v = getVal();
+                    v += sign * step;
+                    setVal(v);
                 }
 
                 const up = spin.querySelector('.spin-up');
@@ -1293,15 +1332,16 @@
 
         isaSlider.addEventListener('input', () => {
             isaDeviationC = parseInt(isaSlider.value, 10) || 0;
-            const sign = isaDeviationC > 0 ? "+" : "";
+            const sign = isaDeviationC >= 0 ? "+" : "";
             isaValueSpan.textContent = `${sign}${isaDeviationC}°C`;
+            setIsaFieldFromValue(isaDeviationC);
 
             if (currentPoint || lockedPoint) {
                 redraw(currentPoint || lockedPoint);
                 const p = lockedPoint || currentPoint;
                 const tas = tasFromPoint(p);
                 const tasStr = tas ? tas.toFixed(1) : "N/A";
-                const deltaStr = (isaDeviationC > 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
+                const deltaStr = (isaDeviationC >= 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
                 infoDiv.textContent =
                     `${lockedPoint ? "LOCKED → " : ""}Mach ${p.M.toFixed(2)} | CAS ${p.cas.toFixed(1)} kt | Alt ${p.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
             } else {
@@ -1320,6 +1360,7 @@
             setCalcMode("solveAlt");
             attachSpinButtons();
             resizeCanvas();
+            setIsaFieldFromValue(0);
         });
 
         buildData();
