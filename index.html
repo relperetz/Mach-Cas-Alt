@@ -2,133 +2,407 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>Interactive Mach–CAS–Altitude Chart (Dark + Lock v7 + Calc Panel)</title>
+    <title>Aeronautical Calculator – Mach · CAS · Altitude</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
+        :root {
+            --bg-main: #05070c;
+            --bg-card: #0d141f;
+            --bg-card-elevated: #111827;
+            --bg-input: #111827;
+            --bg-input-focus: #020617;
+            --border-subtle: #1f2933;
+            --accent: #38bdf8;
+            --accent-soft: rgba(56, 189, 248, 0.16);
+            --accent-strong: #0ea5e9;
+            --text-main: #e5e7eb;
+            --text-muted: #9ca3af;
+            --danger: #f97373;
+        }
+
+        * { box-sizing: border-box; }
+
         body {
             margin: 0;
-            background: #0b0b0b;
-            color: #eee;
-            font-family: Arial, sans-serif;
+            padding: 16px;
+            background: radial-gradient(circle at top, #020617 0, #020617 40%, #020617 60%, #000 100%);
+            color: var(--text-main);
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
         }
+
         h1 {
-            font-size: 1.2rem;
-            margin: 12px 0 4px;
+            font-size: 1.5rem;
+            margin: 8px 0 4px;
+            text-align: right;
+            width: 100%;
+            max-width: 960px;
+        }
+
+        .subtitle {
+            width: 100%;
+            max-width: 960px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        /* ===== Card ===== */
+        .card {
+            width: 100%;
+            max-width: 960px;
+            background: radial-gradient(circle at top left, #111827 0, #020617 65%);
+            border-radius: 18px;
+            border: 1px solid #111827;
+            box-shadow:
+                0 18px 40px rgba(15, 23, 42, 0.8),
+                0 0 0 1px rgba(15, 23, 42, 0.9);
+            padding: 18px 20px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .title-block {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .icon-circle {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            background: radial-gradient(circle at 20% 0, #38bdf8, #0f172a 70%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.4rem;
+            box-shadow: 0 8px 20px rgba(56, 189, 248, 0.4);
+        }
+
+        .title-main {
+            font-size: 1.15rem;
+            font-weight: 600;
+        }
+
+        .title-sub {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .solve-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-align: left;
+        }
+
+        /* ===== Tabs ===== */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            margin-bottom: 4px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 10px 8px 8px;
+            border-radius: 12px;
+            border: 1px solid var(--border-subtle);
+            background: #020617;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            cursor: pointer;
             text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
         }
-        #container {
+
+        .tab span:first-child {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .tab span:last-child {
+            font-size: 0.7rem;
+            text-transform: lowercase;
+        }
+
+        .tab.active {
+            border-color: var(--accent);
+            background: radial-gradient(circle at top, #0b1120 0, #020617 55%);
+            color: var(--text-main);
+            box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.3);
+        }
+
+        /* ===== Form rows ===== */
+        .form-rows {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 6px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 190px;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .form-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .input-wrapper {
             position: relative;
-            overflow: hidden;
         }
+
+        .field {
+            width: 100%;
+            padding: 7px 40px 7px 10px;
+            border-radius: 10px;
+            border: 1px solid var(--border-subtle);
+            background: var(--bg-input);
+            color: var(--text-main);
+            font-size: 0.9rem;
+            outline: none;
+            direction: ltr;
+            text-align: right;
+            transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+        }
+
+        .field:focus {
+            border-color: var(--accent);
+            background: var(--bg-input-focus);
+            box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.4);
+        }
+
+        .field:disabled {
+            opacity: 0.55;
+            cursor: default;
+        }
+
+        .unit {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* Buttons */
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 6px;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .primary-btn {
+            border: none;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #38bdf8, #0ea5e9);
+            color: #020617;
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 8px 18px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow:
+                0 12px 30px rgba(56, 189, 248, 0.5),
+                0 0 0 1px rgba(15, 23, 42, 0.9);
+        }
+
+        .primary-btn span.icon {
+            font-size: 1rem;
+        }
+
+        .reset-btn {
+            border-radius: 999px;
+            border: 1px solid var(--border-subtle);
+            background: #020617;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            padding: 6px 14px;
+            cursor: pointer;
+        }
+
+        .helper-text {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        .result-box {
+            margin-top: 8px;
+            font-size: 0.82rem;
+            background: #020617;
+            border-radius: 10px;
+            padding: 6px 8px;
+            border: 1px solid #111827;
+            color: var(--text-main);
+        }
+
+        .result-box b {
+            color: var(--accent-strong);
+        }
+
+        /* ===== Graph & slider ===== */
+        #container {
+            margin-top: 18px;
+        }
+
         #machCanvas {
-            border: 1px solid #333;
-            border-radius: 6px;
-            background: #0d0d0d;
+            border-radius: 10px;
+            border: 1px solid #111827;
+            background: #020617;
         }
+
         #info {
             margin-top: 8px;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             text-align: center;
             min-height: 1.2em;
         }
+
         #legend {
             margin-top: 4px;
             font-size: 0.8rem;
             opacity: 0.8;
             text-align: center;
         }
+
         #isaControl {
-            margin-top: 6px;
+            margin-top: 8px;
             font-size: 0.85rem;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 6px;
         }
+
         #isaControl span {
             min-width: 40px;
             display: inline-block;
             text-align: left;
         }
+
         input[type="range"] {
-            width: 200px;
+            width: 220px;
         }
 
-        @media (max-width: 600px) {
-            h1 {
-                font-size: 1rem;
+        @media (max-width: 720px) {
+            .form-row {
+                grid-template-columns: 1fr;
             }
-            #info {
-                font-size: 0.85rem;
+            .solve-label {
+                text-align: right;
             }
         }
     </style>
 </head>
 <body>
-    <h1>גרף Mach–CAS–Altitude אינטראקטיבי (Dark + Lock v7 + Calc Panel)</h1>
+    <h1>Aeronautical Calculator</h1>
+    <div class="subtitle">CAS · Mach · Altitude – מחשבון אווירי + גרף אינטראקטיבי</div>
 
-    <!-- פאנל החישוב לפני הגרף -->
-    <div id="calcPanel" style="margin-top:10px; margin-bottom:10px; max-width:900px;">
-      <fieldset style="border:1px solid #444; border-radius:6px; padding:10px;">
-        <legend style="padding:0 6px; font-size:0.9rem;">Aero Calc – פתרון 2 מתוך 3</legend>
+    <div class="card">
+        <div class="card-header">
+            <div class="title-block">
+                <div class="icon-circle">✈️</div>
+                <div>
+                    <div class="title-main">Aeronautical Calculator</div>
+                    <div class="title-sub">CAS · Mach · Altitude · TAS · ΔISA</div>
+                </div>
+            </div>
+            <div class="solve-label">בחר פרמטר לחישוב (חופשי):</div>
+        </div>
 
-        <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;">
-
-          <div>
-            <label for="modeSelect" style="font-size:0.85rem;">מה לפתור?</label><br/>
-            <select id="modeSelect" style="padding:3px; font-size:0.85rem;">
-              <option value="solveMach">לחשב Mach (נתון CAS + Alt)</option>
-              <option value="solveCas">לחשב CAS (נתון Mach + Alt)</option>
-              <option value="solveAlt">לחשב Alt (נתון Mach + CAS)</option>
-            </select>
-          </div>
-
-          <div>
-            <label for="machInput" style="font-size:0.85rem;">Mach</label><br/>
-            <input id="machInput" type="number" step="0.01" value="0.80"
-                   style="width:80px; padding:3px; font-size:0.85rem;">
-          </div>
-
-          <div>
-            <label for="casInput" style="font-size:0.85rem;">CAS [kt]</label><br/>
-            <input id="casInput" type="number" step="1" value="350"
-                   style="width:80px; padding:3px; font-size:0.85rem;">
-          </div>
-
-          <div>
-            <label for="altInput" style="font-size:0.85rem;">Alt [ft]</label><br/>
-            <input id="altInput" type="number" step="100" value="23000"
-                   style="width:90px; padding:3px; font-size:0.85rem;">
-          </div>
-
-          <div>
-            <label for="isaInput" style="font-size:0.85rem;">ΔISA [°C]</label><br/>
-            <input id="isaInput" type="number" step="1" value="0"
-                   style="width:70px; padding:3px; font-size:0.85rem;">
-          </div>
-
-          <div>
-            <button id="solveButton"
-                    style="padding:6px 12px; font-size:0.85rem; border-radius:4px;
-                           border:1px solid #00E5FF; background:#003344; color:#E1F5FE;
-                           cursor:pointer; margin-top:4px;">
-              לחשב ולהציג על הגרף
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab" id="tabCas">
+                <span>CAS</span><span>knots</span>
             </button>
-          </div>
+            <button class="tab" id="tabMach">
+                <span>MACH</span><span>number</span>
+            </button>
+            <button class="tab active" id="tabAlt">
+                <span>ALT</span><span>feet</span>
+            </button>
         </div>
 
-        <div id="calcResult"
-             style="margin-top:8px; font-size:0.85rem; background:#111; border-radius:4px;
-                    padding:6px 8px; border:1px solid #333;">
-          תוצאה תוצג כאן…
+        <!-- Input rows -->
+        <div class="form-rows">
+            <div class="form-row">
+                <div class="form-label">Calibrated Airspeed (CAS)</div>
+                <div class="input-wrapper">
+                    <input id="casInput" type="number" step="1" value="350" class="field">
+                    <span class="unit">kts</span>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-label">Mach Number</div>
+                <div class="input-wrapper">
+                    <input id="machInput" type="number" step="0.01" value="0.80" class="field">
+                    <span class="unit">M</span>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-label">Altitude</div>
+                <div class="input-wrapper">
+                    <input id="altInput" type="number" step="100" value="23000" class="field">
+                    <span class="unit">ft</span>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-label">ΔISA (temperature deviation)</div>
+                <div class="input-wrapper">
+                    <input id="isaInput" type="number" step="1" value="0" class="field">
+                    <span class="unit">°C</span>
+                </div>
+            </div>
         </div>
-      </fieldset>
+
+        <div class="card-footer">
+            <button id="solveButton" class="primary-btn">
+                <span class="icon">🧮</span>
+                <span>חישוב & הצגה על הגרף</span>
+            </button>
+
+            <button id="resetButton" class="reset-btn">Reset</button>
+
+            <div class="helper-text">
+                ברשותך, מחשב בלי אישור 😄
+            </div>
+        </div>
+
+        <div id="calcResult" class="result-box">
+            תוצאה תוצג כאן…
+        </div>
     </div>
 
-    <!-- הגרף -->
+    <!-- גרף -->
     <div id="container">
         <canvas id="machCanvas" width="900" height="550"></canvas>
     </div>
@@ -143,7 +417,7 @@
     </div>
 
     <script>
-        // ===== קבועי ISA =====
+        // ===== ISA constants =====
         const T0   = 288.15;
         const P0   = 101325.0;
         const R    = 287.05287;
@@ -152,7 +426,6 @@
         const GAMMA = 1.4;
         const FT_PER_M = 3.28084;
 
-        // טווחים
         const CAS_MIN = 150;
         const CAS_MAX = 700;
         const ALT_MIN = 0;
@@ -163,7 +436,7 @@
             machValues.push(parseFloat(m.toFixed(1)));
         }
 
-        const altStepFt = 2000; // לדגימה לציור
+        const altStepFt = 2000;
 
         const canvas = document.getElementById('machCanvas');
         const ctx = canvas.getContext('2d');
@@ -177,16 +450,21 @@
         const marginBottom = 50;
 
         let machLinesData = [];
-        let lockedPoint = null;          // {M, cas, altFt}
-        let currentPoint = null;         // הנקודה האחרונה (נעולה או hover)
+        let lockedPoint = null;
+        let currentPoint = null;
         let highlightCasTick = null;
         let highlightAltTick = null;
-        let isaDeviationC = 0;           // ΔISA °C
+        let isaDeviationC = 0;
 
-        // למגע
         let lastTouchPos = null;
 
-        // ===== ISA + CAS(M,h) (לפי ISA) =====
+        // מצב החישוב הנוכחי (לפי הטאב החופשי)
+        // solveCas  = CAS מחושב (טאב CAS)
+        // solveMach = Mach מחושב (טאב MACH)
+        // solveAlt  = Alt מחושב (טאב ALT)
+        let calcMode = "solveAlt";
+
+        // ===== ISA & CAS/Mach helpers =====
         function isaAtAltitude(hMeters) {
             let T, p;
             if (hMeters <= 11000.0) {
@@ -215,7 +493,6 @@
             return Vc / 0.514444;
         }
 
-        // TAS לפי Mach + גובה + ΔISA
         function tasFromPoint(point) {
             if (!point) return null;
             const altM = point.altFt / FT_PER_M;
@@ -227,7 +504,6 @@
             return tas_kt;
         }
 
-        // פתרון גובה מתוך Mach + CAS (ביסקשן)
         function findAltitudeForCasAndMach(M, casTarget) {
             const hMin = ALT_MIN / FT_PER_M;
             const hMax = ALT_MAX / FT_PER_M;
@@ -258,7 +534,6 @@
             return 0.5 * (lo + hi);
         }
 
-        // פתרון Mach מתוך CAS + Alt
         function solveMachGivenCasAlt(casTarget, altFt) {
             const altM = altFt / FT_PER_M;
             function f(M) {
@@ -288,7 +563,7 @@
             return 0.5 * (lo + hi);
         }
 
-        // מיפוי מסך
+        // ===== Screen mapping =====
         function xFromCas(cas) {
             const frac = (cas - CAS_MIN) / (CAS_MAX - CAS_MIN);
             return marginLeft + frac * (canvas.width - marginLeft - marginRight);
@@ -309,7 +584,6 @@
             return ALT_MIN + frac * (ALT_MAX - ALT_MIN);
         }
 
-        // בונה קו Mach בודד עבור Mach נתון
         function buildMachLineData(M) {
             const pts = [];
             for (let altFt = ALT_MIN; altFt <= ALT_MAX + 1; altFt += altStepFt) {
@@ -320,7 +594,6 @@
             return { M, pts };
         }
 
-        // נתונים לציור קווים (Mach "בסיסיים")
         function buildData() {
             machLinesData = [];
             for (const M of machValues) {
@@ -328,28 +601,23 @@
             }
         }
 
-        // מוסיף קו Mach אם הוא עדיין לא קיים (למשל 0.82M)
         function addMachLineIfMissing(M) {
             const mNum = Number(M);
             if (!isFinite(mNum)) return;
             const eps = 1e-6;
             for (const line of machLinesData) {
-                if (Math.abs(line.M - mNum) < eps) {
-                    return; // כבר קיים
-                }
+                if (Math.abs(line.M - mNum) < eps) return;
             }
-            const newLine = buildMachLineData(mNum);
-            machLinesData.push(newLine);
+            machLinesData.push(buildMachLineData(mNum));
         }
 
-        // צירים + גריד + טיקים
+        // ===== Axes, grid, Mach lines, labels =====
         function drawAxesAndGrid() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = "#0d0d0d";
+            ctx.fillStyle = "#020617";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // גריד אנכי (כל 50 קשר)
-            ctx.strokeStyle = "#333";
+            ctx.strokeStyle = "#1f2937";
             ctx.lineWidth = 0.9;
             ctx.setLineDash([2, 4]);
             ctx.beginPath();
@@ -360,7 +628,6 @@
             }
             ctx.stroke();
 
-            // גריד אופקי (כל 5,000 ft)
             ctx.beginPath();
             for (let alt = 0; alt <= 40000; alt += 5000) {
                 const y = yFromAlt(alt);
@@ -370,23 +637,19 @@
             ctx.stroke();
             ctx.setLineDash([]);
 
-            // צירי X/Y
-            ctx.strokeStyle = "#aaa";
+            ctx.strokeStyle = "#9ca3af";
             ctx.lineWidth = 1.2;
-            // X
             ctx.beginPath();
             ctx.moveTo(xFromCas(CAS_MIN), yFromAlt(ALT_MIN));
             ctx.lineTo(xFromCas(CAS_MAX), yFromAlt(ALT_MIN));
             ctx.stroke();
-            // Y
+
             ctx.beginPath();
             ctx.moveTo(xFromCas(CAS_MIN), yFromAlt(ALT_MIN));
             ctx.lineTo(xFromCas(CAS_MIN), yFromAlt(ALT_MAX));
             ctx.stroke();
 
-            // ===== טיקים על ציר X =====
-            // טיקים קטנים כל 10 קשר
-            ctx.strokeStyle = "#666";
+            ctx.strokeStyle = "#4b5563";
             ctx.lineWidth = 0.8;
             ctx.beginPath();
             const yAxis = yFromAlt(ALT_MIN);
@@ -398,15 +661,14 @@
             }
             ctx.stroke();
 
-            // מספרים וטיקים ראשיים כל 50 קשר
-            ctx.font = "11px Arial";
+            ctx.font = "11px system-ui";
             ctx.textAlign = "center";
             ctx.textBaseline = "top";
             for (let cas = 150; cas <= 700; cas += 50) {
                 const x = xFromCas(cas);
                 const yAxisLocal = yFromAlt(ALT_MIN);
 
-                ctx.strokeStyle = "#aaa";
+                ctx.strokeStyle = "#9ca3af";
                 ctx.lineWidth = 1.0;
                 ctx.beginPath();
                 ctx.moveTo(x, yAxisLocal);
@@ -414,18 +676,16 @@
                 ctx.stroke();
 
                 if (highlightCasTick !== null && cas === highlightCasTick) {
-                    ctx.fillStyle = "#00E5FF";
-                    ctx.font = "bold 11px Arial";
+                    ctx.fillStyle = "#38bdf8";
+                    ctx.font = "bold 11px system-ui";
                 } else {
-                    ctx.fillStyle = "#ddd";
-                    ctx.font = "11px Arial";
+                    ctx.fillStyle = "#e5e7eb";
+                    ctx.font = "11px system-ui";
                 }
                 ctx.fillText(cas.toString(), x, yAxisLocal + 8);
             }
 
-            // ===== טיקים על ציר Y =====
-            // טיקים קטנים כל 1000 ft
-            ctx.strokeStyle = "#666";
+            ctx.strokeStyle = "#4b5563";
             ctx.lineWidth = 0.8;
             ctx.beginPath();
             const xAxis = xFromCas(CAS_MIN);
@@ -437,14 +697,13 @@
             }
             ctx.stroke();
 
-            // מספרים וטיקים ראשיים כל 5000 ft
             ctx.textAlign = "right";
             ctx.textBaseline = "middle";
             for (let alt = 0; alt <= 40000; alt += 5000) {
                 const y = yFromAlt(alt);
                 const xAxisLocal = xFromCas(CAS_MIN);
 
-                ctx.strokeStyle = "#aaa";
+                ctx.strokeStyle = "#9ca3af";
                 ctx.lineWidth = 1.0;
                 ctx.beginPath();
                 ctx.moveTo(xAxisLocal - 6, y);
@@ -452,18 +711,17 @@
                 ctx.stroke();
 
                 if (highlightAltTick !== null && alt === highlightAltTick) {
-                    ctx.fillStyle = "#00E5FF";
-                    ctx.font = "bold 11px Arial";
+                    ctx.fillStyle = "#38bdf8";
+                    ctx.font = "bold 11px system-ui";
                 } else {
-                    ctx.fillStyle = "#ddd";
-                    ctx.font = "11px Arial";
+                    ctx.fillStyle = "#e5e7eb";
+                    ctx.font = "11px system-ui";
                 }
                 ctx.fillText(alt.toString(), xAxisLocal - 8, y);
             }
 
-            // כותרות צירים
-            ctx.fillStyle = "#eee";
-            ctx.font = "13px Arial";
+            ctx.fillStyle = "#e5e7eb";
+            ctx.font = "13px system-ui";
             ctx.textAlign = "center";
             ctx.textBaseline = "top";
             ctx.fillText("CAS [kt]", (xFromCas(CAS_MIN) + xFromCas(CAS_MAX)) / 2, canvas.height - marginBottom + 20);
@@ -476,16 +734,14 @@
             ctx.fillText("Altitude [ft]", 0, 0);
             ctx.restore();
 
-            // כותרת עליונה
-            ctx.font = "16px Arial";
+            ctx.font = "16px system-ui";
             ctx.textAlign = "center";
             ctx.textBaseline = "top";
-            ctx.fillText("Mach–CAS–Altitude (Interactive Dark + Lock)", canvas.width / 2, 8);
+            ctx.fillText("Mach–CAS–Altitude Chart", canvas.width / 2, 8);
         }
 
-        // קווי Mach (כולל דינמיים)
         function drawMachLines(highlightMach) {
-            const colors = ["#4FC3F7","#29B6F6","#03A9F4","#0288D1","#0277BD","#01579B","#81D4FA"];
+            const colors = ["#4FC3F7","#29B6F6","#03A9F4","#0288D1","#0277BD","#0ea5e9","#81D4FA"];
             for (let i = 0; i < machLinesData.length; i++) {
                 const line = machLinesData[i];
                 const pts = line.pts;
@@ -499,7 +755,7 @@
                     else ctx.lineTo(x, y);
                 }
                 if (highlightMach != null && Math.abs(line.M - highlightMach) < 1e-6) {
-                    ctx.strokeStyle = "#FFFFFF";
+                    ctx.strokeStyle = "#ffffff";
                     ctx.lineWidth = 2.0;
                 } else {
                     ctx.strokeStyle = color;
@@ -508,10 +764,9 @@
                 ctx.stroke();
             }
 
-            // תוויות Mach למעלה (גם לדינמיים)
             const labelAltFt = 36000;
-            ctx.font = "11px Arial";
-            ctx.fillStyle = "#BBDEFB";
+            ctx.font = "11px system-ui";
+            ctx.fillStyle = "#bfdbfe";
             ctx.textAlign = "left";
             ctx.textBaseline = "middle";
 
@@ -529,7 +784,6 @@
             }
         }
 
-        // בועת טקסט ליד הנקודה – Mach | CAS | Alt | TAS | ISA
         function drawPointLabel(point) {
             if (!point) return;
 
@@ -537,10 +791,7 @@
             const cas = Number(point.cas);
             const alt = Number(point.altFt);
 
-            if (!isFinite(M) || !isFinite(cas) || !isFinite(alt)) {
-                console.warn("drawPointLabel: point לא תקין", point);
-                return;
-            }
+            if (!isFinite(M) || !isFinite(cas) || !isFinite(alt)) return;
 
             const x = xFromCas(cas);
             const y = yFromAlt(alt);
@@ -551,7 +802,7 @@
 
             const text = `${M.toFixed(2)}M | ${cas.toFixed(1)} kt CAS | ${alt.toFixed(0)} ft | ${tasStr} kt TAS | ISA${deltaStr}`;
 
-            ctx.font = "12px Arial";
+            ctx.font = "12px system-ui";
             const paddingX = 7;
             const paddingY = 5;
             const textWidth = ctx.measureText(text).width;
@@ -563,8 +814,8 @@
                 boxX = x - 10 - (textWidth + 2 * paddingX);
             }
 
-            ctx.fillStyle = "rgba(0,0,0,0.85)";
-            ctx.strokeStyle = "#00E5FF";
+            ctx.fillStyle = "rgba(15,23,42,0.95)";
+            ctx.strokeStyle = "#38bdf8";
             ctx.lineWidth = 1;
             ctx.beginPath();
             ctx.rect(boxX, boxY - paddingY, textWidth + 2 * paddingX, 2 * paddingY + 14);
@@ -577,7 +828,6 @@
             ctx.fillText(text, boxX + paddingX, boxY - paddingY + 3);
         }
 
-        // רינדור מלא
         function redraw(point) {
             currentPoint = point || null;
             drawAxesAndGrid();
@@ -587,7 +837,7 @@
                 const x = xFromCas(point.cas);
                 const y = yFromAlt(point.altFt);
 
-                ctx.strokeStyle = "#888";
+                ctx.strokeStyle = "#6b7280";
                 ctx.lineWidth = 1;
                 ctx.setLineDash([4, 4]);
                 ctx.beginPath();
@@ -598,7 +848,7 @@
                 ctx.stroke();
                 ctx.setLineDash([]);
 
-                ctx.fillStyle = lockedPoint ? "#FF5252" : "#FFEB3B";
+                ctx.fillStyle = lockedPoint ? "#f97373" : "#facc15";
                 ctx.beginPath();
                 ctx.arc(x, y, 4.5, 0, 2 * Math.PI);
                 ctx.fill();
@@ -607,7 +857,6 @@
             }
         }
 
-        // מציאת קו Mach הקרוב + סנאפ ל-10 קשר
         function findNearestOnLines(mouseX, mouseY) {
             const thresholdPx = 12;
 
@@ -631,7 +880,6 @@
                 return null;
             }
 
-            // סנאפ ל-10 קשר לפי CAS מהמיקום האופקי
             let rawCas = casFromX(mouseX);
             let snappedCas = Math.round(rawCas / 10) * 10;
             if (snappedCas < CAS_MIN) snappedCas = CAS_MIN;
@@ -646,7 +894,6 @@
             return { M: bestLine.M, cas: snappedCas, altFt: altFt };
         }
 
-        // === לוגיקת "תנועה" (משותפת לעכבר וטאצ') ===
         function handlePointerMove(mx, my) {
             if (lockedPoint) {
                 highlightCasTick = Math.round(lockedPoint.cas / 50) * 50;
@@ -690,7 +937,6 @@
             }
         }
 
-        // === לוגיקת "קליק/נעילה" (משותפת לעכבר וטאצ') ===
         function handlePointerClick(mx, my) {
             if (lockedPoint) {
                 lockedPoint = null;
@@ -720,7 +966,6 @@
             }
         }
 
-        // === אירועי עכבר ===
         canvas.addEventListener('mousemove', (e) => {
             const rect = canvas.getBoundingClientRect();
             const mx = e.clientX - rect.left;
@@ -753,7 +998,6 @@
             handlePointerClick(mx, my);
         });
 
-        // === אירועי טאצ' למובייל ===
         canvas.addEventListener('touchstart', (e) => {
             const rect = canvas.getBoundingClientRect();
             const touch = e.touches[0];
@@ -780,7 +1024,7 @@
             }
         });
 
-        // === API חיצוני: highlightMachCasAlt(M, cas, altFt) ===
+        // API חיצוני
         window.highlightMachCasAlt = function(M, cas, altFt) {
             const mNum   = Number(M);
             const casNum = Number(cas);
@@ -790,7 +1034,6 @@
                 return;
             }
 
-            // להוסיף קו Mach חדש אם לא קיים (למשל 0.82M)
             addMachLineIfMissing(mNum);
 
             let useAltFt = altFt;
@@ -821,17 +1064,15 @@
                 `LOCKED (API) → Mach ${mNum.toFixed(2)} | CAS ${casNum.toFixed(1)} kt | Alt ${altNum.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
         };
 
-        // ===== חישוב מתוך הפאנל (mode + שדות) =====
+        // חישוב מתוך הפאנל
         function runAeroCalcFromPanel() {
-            const mode = document.getElementById('modeSelect').value;
-
             let M   = parseFloat(document.getElementById('machInput').value);
             let cas = parseFloat(document.getElementById('casInput').value);
             let alt = parseFloat(document.getElementById('altInput').value);
             let dIsa = parseFloat(document.getElementById('isaInput').value);
 
             if (isNaN(dIsa)) dIsa = 0;
-            isaDeviationC = dIsa; // לעדכן גם את הגרף
+            isaDeviationC = dIsa;
             const sign = dIsa > 0 ? "+" : "";
             isaValueSpan.textContent = `${sign}${dIsa.toFixed(0)}°C`;
 
@@ -839,9 +1080,9 @@
             let solvedCas = cas;
             let solvedAlt = alt;
 
-            if (mode === "solveMach") {
+            if (calcMode === "solveMach") {
                 if (!isFinite(cas) || !isFinite(alt)) {
-                    alert("במצב 'לחשב Mach' חייבים להזין CAS ו-Alt");
+                    alert("במצב 'MACH' חייבים להזין CAS ו-Alt");
                     return;
                 }
                 const mRes = solveMachGivenCasAlt(cas, alt);
@@ -853,10 +1094,9 @@
                 solvedCas = cas;
                 solvedAlt = alt;
                 document.getElementById('machInput').value = solvedM.toFixed(3);
-            }
-            else if (mode === "solveCas") {
+            } else if (calcMode === "solveCas") {
                 if (!isFinite(M) || !isFinite(alt)) {
-                    alert("במצב 'לחשב CAS' חייבים להזין Mach ו-Alt");
+                    alert("במצב 'CAS' חייבים להזין Mach ו-Alt");
                     return;
                 }
                 const altM = alt / FT_PER_M;
@@ -865,10 +1105,9 @@
                 solvedCas = casRes;
                 solvedAlt = alt;
                 document.getElementById('casInput').value = solvedCas.toFixed(1);
-            }
-            else if (mode === "solveAlt") {
+            } else if (calcMode === "solveAlt") {
                 if (!isFinite(M) || !isFinite(cas)) {
-                    alert("במצב 'לחשב Alt' חייבים להזין Mach ו-CAS");
+                    alert("במצב 'ALT' חייבים להזין Mach ו-CAS");
                     return;
                 }
                 const hM = findAltitudeForCasAndMach(M, cas);
@@ -900,12 +1139,59 @@
                 `TAS: <b>${tasStr} kt</b> | ` +
                 `ISA: <b>${dIsaStr}</b>`;
 
-            // להוסיף קו Mach אם צריך ולהציג נקודה נעולה על הגרף
             addMachLineIfMissing(solvedM);
             window.highlightMachCasAlt(solvedM, solvedCas, solvedAlt);
         }
 
-        // שליטה ב-ΔISA מהסליידר
+        function setCalcMode(mode) {
+            calcMode = mode;
+
+            const tabCas  = document.getElementById('tabCas');
+            const tabMach = document.getElementById('tabMach');
+            const tabAlt  = document.getElementById('tabAlt');
+
+            tabCas.classList.remove('active');
+            tabMach.classList.remove('active');
+            tabAlt.classList.remove('active');
+
+            const casInput  = document.getElementById('casInput');
+            const machInput = document.getElementById('machInput');
+            const altInput  = document.getElementById('altInput');
+
+            casInput.disabled  = false;
+            machInput.disabled = false;
+            altInput.disabled  = false;
+
+            if (mode === "solveCas") {
+                tabCas.classList.add('active');
+                casInput.disabled = true;
+            } else if (mode === "solveMach") {
+                tabMach.classList.add('active');
+                machInput.disabled = true;
+            } else {
+                tabAlt.classList.add('active');
+                altInput.disabled = true;
+            }
+        }
+
+        function resetAll() {
+            document.getElementById('casInput').value = 350;
+            document.getElementById('machInput').value = 0.80;
+            document.getElementById('altInput').value = 23000;
+            document.getElementById('isaInput').value = 0;
+            isaDeviationC = 0;
+            isaSlider.value = 0;
+            isaValueSpan.textContent = "0°C";
+            lockedPoint = null;
+            currentPoint = null;
+            highlightCasTick = null;
+            highlightAltTick = null;
+            document.getElementById('calcResult').textContent = "תוצאה תוצג כאן…";
+            redraw(null);
+            infoDiv.textContent = "הזז את העכבר או האצבע מעל הגרף, קרוב לאחד מקווי ה-Mach…";
+            setCalcMode("solveAlt");
+        }
+
         isaSlider.addEventListener('input', () => {
             isaDeviationC = parseInt(isaSlider.value, 10) || 0;
             const sign = isaDeviationC > 0 ? "+" : "";
@@ -938,15 +1224,18 @@
             }
         });
 
-        // לחבר את כפתור החישוב אחרי שה־DOM עלה
         document.addEventListener('DOMContentLoaded', () => {
-            const btn = document.getElementById('solveButton');
-            if (btn) {
-                btn.addEventListener('click', runAeroCalcFromPanel);
-            }
+            document.getElementById('solveButton').addEventListener('click', runAeroCalcFromPanel);
+            document.getElementById('resetButton').addEventListener('click', resetAll);
+
+            document.getElementById('tabCas').addEventListener('click', () => setCalcMode("solveCas"));
+            document.getElementById('tabMach').addEventListener('click', () => setCalcMode("solveMach"));
+            document.getElementById('tabAlt').addEventListener('click', () => setCalcMode("solveAlt"));
+
+            setCalcMode("solveAlt");
         });
 
-        // התחלה
+        // init
         buildData();
         redraw(null);
     </script>
