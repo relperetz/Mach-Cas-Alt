@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>Interactive Mach–CAS–Altitude Chart (Dark + Lock v7)</title>
+    <title>Interactive Mach–CAS–Altitude Chart (Dark + Lock v7 + Calc Panel)</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body {
@@ -68,7 +68,67 @@
     </style>
 </head>
 <body>
-    <h1>גרף Mach–CAS–Altitude אינטראקטיבי (Dark + Lock v7)</h1>
+    <h1>גרף Mach–CAS–Altitude אינטראקטיבי (Dark + Lock v7 + Calc Panel)</h1>
+
+    <!-- פאנל החישוב לפני הגרף -->
+    <div id="calcPanel" style="margin-top:10px; margin-bottom:10px; max-width:900px;">
+      <fieldset style="border:1px solid #444; border-radius:6px; padding:10px;">
+        <legend style="padding:0 6px; font-size:0.9rem;">Aero Calc – פתרון 2 מתוך 3</legend>
+
+        <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;">
+
+          <div>
+            <label for="modeSelect" style="font-size:0.85rem;">מה לפתור?</label><br/>
+            <select id="modeSelect" style="padding:3px; font-size:0.85rem;">
+              <option value="solveMach">לחשב Mach (נתון CAS + Alt)</option>
+              <option value="solveCas">לחשב CAS (נתון Mach + Alt)</option>
+              <option value="solveAlt">לחשב Alt (נתון Mach + CAS)</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="machInput" style="font-size:0.85rem;">Mach</label><br/>
+            <input id="machInput" type="number" step="0.01" value="0.80"
+                   style="width:80px; padding:3px; font-size:0.85rem;">
+          </div>
+
+          <div>
+            <label for="casInput" style="font-size:0.85rem;">CAS [kt]</label><br/>
+            <input id="casInput" type="number" step="1" value="350"
+                   style="width:80px; padding:3px; font-size:0.85rem;">
+          </div>
+
+          <div>
+            <label for="altInput" style="font-size:0.85rem;">Alt [ft]</label><br/>
+            <input id="altInput" type="number" step="100" value="23000"
+                   style="width:90px; padding:3px; font-size:0.85rem;">
+          </div>
+
+          <div>
+            <label for="isaInput" style="font-size:0.85rem;">ΔISA [°C]</label><br/>
+            <input id="isaInput" type="number" step="1" value="0"
+                   style="width:70px; padding:3px; font-size:0.85rem;">
+          </div>
+
+          <div>
+            <button id="solveButton"
+                    style="padding:6px 12px; font-size:0.85rem; border-radius:4px;
+                           border:1px solid #00E5FF; background:#003344; color:#E1F5FE;
+                           cursor:pointer; margin-top:4px;">
+              לחשב ולהציג על הגרף
+            </button>
+          </div>
+        </div>
+
+        <div id="calcResult"
+             style="margin-top:8px; font-size:0.85rem; background:#111; border-radius:4px;
+                    padding:6px 8px; border:1px solid #333;">
+          תוצאה תוצג כאן…
+        </div>
+      </fieldset>
+    </div>
+
+    <!-- הגרף -->
     <div id="container">
         <canvas id="machCanvas" width="900" height="550"></canvas>
     </div>
@@ -198,6 +258,36 @@
             return 0.5 * (lo + hi);
         }
 
+        // פתרון Mach מתוך CAS + Alt
+        function solveMachGivenCasAlt(casTarget, altFt) {
+            const altM = altFt / FT_PER_M;
+            function f(M) {
+                return casFromMachAndAlt(M, altM) - casTarget;
+            }
+
+            let lo = 0.1;
+            let hi = 2.0;
+            let fLo = f(lo);
+            let fHi = f(hi);
+
+            if (!isFinite(fLo) || !isFinite(fHi) || fLo * fHi > 0) {
+                return null;
+            }
+
+            for (let i = 0; i < 60; i++) {
+                const mid = 0.5 * (lo + hi);
+                const fMid = f(mid);
+                if (fLo * fMid <= 0) {
+                    hi = mid;
+                    fHi = fMid;
+                } else {
+                    lo = mid;
+                    fLo = fMid;
+                }
+            }
+            return 0.5 * (lo + hi);
+        }
+
         // מיפוי מסך
         function xFromCas(cas) {
             const frac = (cas - CAS_MIN) / (CAS_MAX - CAS_MIN);
@@ -219,14 +309,6 @@
             return ALT_MIN + frac * (ALT_MAX - ALT_MIN);
         }
 
-        // נתונים לציור קווים (Mach "בסיסיים")
-        function buildData() {
-            machLinesData = [];
-            for (const M of machValues) {
-                machLinesData.push(buildMachLineData(M));
-            }
-        }
-
         // בונה קו Mach בודד עבור Mach נתון
         function buildMachLineData(M) {
             const pts = [];
@@ -236,6 +318,14 @@
                 pts.push({ cas, altFt });
             }
             return { M, pts };
+        }
+
+        // נתונים לציור קווים (Mach "בסיסיים")
+        function buildData() {
+            machLinesData = [];
+            for (const M of machValues) {
+                machLinesData.push(buildMachLineData(M));
+            }
         }
 
         // מוסיף קו Mach אם הוא עדיין לא קיים (למשל 0.82M)
@@ -390,7 +480,7 @@
             ctx.font = "16px Arial";
             ctx.textAlign = "center";
             ctx.textBaseline = "top";
-            ctx.fillText("Mach–CAS–Altitude (Interactive Dark + Lock v7)", canvas.width / 2, 8);
+            ctx.fillText("Mach–CAS–Altitude (Interactive Dark + Lock)", canvas.width / 2, 8);
         }
 
         // קווי Mach (כולל דינמיים)
@@ -434,7 +524,7 @@
                 ctx.save();
                 ctx.translate(xLabel, yLabel);
                 ctx.rotate(-Math.PI / 4);
-                ctx.fillText(line.M.toFixed(2) + "M", 0, 0); // ל-0.82 נראה 0.82M
+                ctx.fillText(line.M.toFixed(2) + "M", 0, 0);
                 ctx.restore();
             }
         }
@@ -731,7 +821,91 @@
                 `LOCKED (API) → Mach ${mNum.toFixed(2)} | CAS ${casNum.toFixed(1)} kt | Alt ${altNum.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
         };
 
-        // שליטה ב-ΔISA
+        // ===== חישוב מתוך הפאנל (mode + שדות) =====
+        function runAeroCalcFromPanel() {
+            const mode = document.getElementById('modeSelect').value;
+
+            let M   = parseFloat(document.getElementById('machInput').value);
+            let cas = parseFloat(document.getElementById('casInput').value);
+            let alt = parseFloat(document.getElementById('altInput').value);
+            let dIsa = parseFloat(document.getElementById('isaInput').value);
+
+            if (isNaN(dIsa)) dIsa = 0;
+            isaDeviationC = dIsa; // לעדכן גם את הגרף
+            const sign = dIsa > 0 ? "+" : "";
+            isaValueSpan.textContent = `${sign}${dIsa.toFixed(0)}°C`;
+
+            let solvedM = M;
+            let solvedCas = cas;
+            let solvedAlt = alt;
+
+            if (mode === "solveMach") {
+                if (!isFinite(cas) || !isFinite(alt)) {
+                    alert("במצב 'לחשב Mach' חייבים להזין CAS ו-Alt");
+                    return;
+                }
+                const mRes = solveMachGivenCasAlt(cas, alt);
+                if (mRes === null) {
+                    alert("לא נמצא פתרון Mach עבור השילוב הזה");
+                    return;
+                }
+                solvedM = mRes;
+                solvedCas = cas;
+                solvedAlt = alt;
+                document.getElementById('machInput').value = solvedM.toFixed(3);
+            }
+            else if (mode === "solveCas") {
+                if (!isFinite(M) || !isFinite(alt)) {
+                    alert("במצב 'לחשב CAS' חייבים להזין Mach ו-Alt");
+                    return;
+                }
+                const altM = alt / FT_PER_M;
+                const casRes = casFromMachAndAlt(M, altM);
+                solvedM = M;
+                solvedCas = casRes;
+                solvedAlt = alt;
+                document.getElementById('casInput').value = solvedCas.toFixed(1);
+            }
+            else if (mode === "solveAlt") {
+                if (!isFinite(M) || !isFinite(cas)) {
+                    alert("במצב 'לחשב Alt' חייבים להזין Mach ו-CAS");
+                    return;
+                }
+                const hM = findAltitudeForCasAndMach(M, cas);
+                if (hM === null) {
+                    alert("לא נמצא גובה עבור השילוב הזה");
+                    return;
+                }
+                solvedM = M;
+                solvedCas = cas;
+                solvedAlt = hM * FT_PER_M;
+                document.getElementById('altInput').value = solvedAlt.toFixed(0);
+            }
+
+            if (!isFinite(solvedM) || !isFinite(solvedCas) || !isFinite(solvedAlt)) {
+                alert("שילוב תוצאה לא תקין");
+                return;
+            }
+
+            const pointForTas = { M: solvedM, altFt: solvedAlt };
+            const tasVal = tasFromPoint(pointForTas);
+            const tasStr = tasVal ? tasVal.toFixed(1) : "N/A";
+            const dIsaStr = (dIsa > 0 ? "+" : "") + dIsa.toFixed(0) + "°C";
+
+            const resDiv = document.getElementById('calcResult');
+            resDiv.innerHTML =
+                `Mach: <b>${solvedM.toFixed(3)}</b> | ` +
+                `CAS: <b>${solvedCas.toFixed(1)} kt</b> | ` +
+                `Alt: <b>${solvedAlt.toFixed(0)} ft</b> | ` +
+                `TAS: <b>${tasStr} kt</b> | ` +
+                `ISA: <b>${dIsaStr}</b>`;
+
+            // להוסיף קו Mach אם צריך ולהציג נקודה נעולה על הגרף
+            addMachLineIfMissing(solvedM);
+            window.highlightMachCasAlt(solvedM, solvedCas, solvedAlt);
+        }
+
+        // שליטה ב-ΔISA מהסליידר
         isaSlider.addEventListener('input', () => {
             isaDeviationC = parseInt(isaSlider.value, 10) || 0;
             const sign = isaDeviationC > 0 ? "+" : "";
@@ -761,6 +935,14 @@
                 highlightCasTick = null;
                 highlightAltTick = null;
                 redraw(null);
+            }
+        });
+
+        // לחבר את כפתור החישוב אחרי שה־DOM עלה
+        document.addEventListener('DOMContentLoaded', () => {
+            const btn = document.getElementById('solveButton');
+            if (btn) {
+                btn.addEventListener('click', runAeroCalcFromPanel);
             }
         });
 
