@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>Interactive Mach–CAS–Altitude Chart (Dark + Lock v6)</title>
+    <title>Interactive Mach–CAS–Altitude Chart (Dark + Lock v7)</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body {
@@ -68,13 +68,13 @@
     </style>
 </head>
 <body>
-    <h1>גרף Mach–CAS–Altitude אינטראקטיבי (Dark + Lock v6)</h1>
+    <h1>גרף Mach–CAS–Altitude אינטראקטיבי (Dark + Lock v7)</h1>
     <div id="container">
         <canvas id="machCanvas" width="900" height="550"></canvas>
     </div>
     <div id="info">הזז את העכבר או האצבע מעל הגרף, קרוב לאחד מקווי ה-Mach…</div>
     <div id="legend">
-        טווח: CAS 150–700 קשר, גובה 0–40,000 ft, קווי Mach: 0.6–1.2 בקפיצות 0.1. קליק / הרמת אצבע = נעילה/שחרור.
+        טווח: CAS 150–700 קשר, גובה 0–40,000 ft, קווי Mach: 0.6–1.2 בקפיצות 0.1 + קווי Mach דינמיים מה-API. קליק / הרמת אצבע = נעילה/שחרור.
     </div>
     <div id="isaControl">
         ΔISA (°C):
@@ -219,22 +219,37 @@
             return ALT_MIN + frac * (ALT_MAX - ALT_MIN);
         }
 
-        // נתונים לציור קווים
+        // נתונים לציור קווים (Mach "בסיסיים")
         function buildData() {
-            const altsFt = [];
-            for (let alt = ALT_MIN; alt <= ALT_MAX + 1; alt += altStepFt) {
-                altsFt.push(alt);
-            }
             machLinesData = [];
             for (const M of machValues) {
-                const pts = [];
-                for (const altFt of altsFt) {
-                    const altM = altFt / FT_PER_M;
-                    const cas = casFromMachAndAlt(M, altM);
-                    pts.push({ cas, altFt });
-                }
-                machLinesData.push({ M, pts });
+                machLinesData.push(buildMachLineData(M));
             }
+        }
+
+        // בונה קו Mach בודד עבור Mach נתון
+        function buildMachLineData(M) {
+            const pts = [];
+            for (let altFt = ALT_MIN; altFt <= ALT_MAX + 1; altFt += altStepFt) {
+                const altM = altFt / FT_PER_M;
+                const cas = casFromMachAndAlt(M, altM);
+                pts.push({ cas, altFt });
+            }
+            return { M, pts };
+        }
+
+        // מוסיף קו Mach אם הוא עדיין לא קיים (למשל 0.82M)
+        function addMachLineIfMissing(M) {
+            const mNum = Number(M);
+            if (!isFinite(mNum)) return;
+            const eps = 1e-6;
+            for (const line of machLinesData) {
+                if (Math.abs(line.M - mNum) < eps) {
+                    return; // כבר קיים
+                }
+            }
+            const newLine = buildMachLineData(mNum);
+            machLinesData.push(newLine);
         }
 
         // צירים + גריד + טיקים
@@ -375,10 +390,10 @@
             ctx.font = "16px Arial";
             ctx.textAlign = "center";
             ctx.textBaseline = "top";
-            ctx.fillText("Mach–CAS–Altitude (Interactive Dark + Lock v6)", canvas.width / 2, 8);
+            ctx.fillText("Mach–CAS–Altitude (Interactive Dark + Lock v7)", canvas.width / 2, 8);
         }
 
-        // קווי Mach
+        // קווי Mach (כולל דינמיים)
         function drawMachLines(highlightMach) {
             const colors = ["#4FC3F7","#29B6F6","#03A9F4","#0288D1","#0277BD","#01579B","#81D4FA"];
             for (let i = 0; i < machLinesData.length; i++) {
@@ -403,7 +418,7 @@
                 ctx.stroke();
             }
 
-            // תוויות Mach למעלה
+            // תוויות Mach למעלה (גם לדינמיים)
             const labelAltFt = 36000;
             ctx.font = "11px Arial";
             ctx.fillStyle = "#BBDEFB";
@@ -419,7 +434,7 @@
                 ctx.save();
                 ctx.translate(xLabel, yLabel);
                 ctx.rotate(-Math.PI / 4);
-                ctx.fillText(line.M.toFixed(1) + "M", 0, 0);
+                ctx.fillText(line.M.toFixed(2) + "M", 0, 0); // ל-0.82 נראה 0.82M
                 ctx.restore();
             }
         }
@@ -684,6 +699,9 @@
                 console.warn("highlightMachCasAlt: Mach או CAS לא מספרים תקינים", M, cas);
                 return;
             }
+
+            // להוסיף קו Mach חדש אם לא קיים (למשל 0.82M)
+            addMachLineIfMissing(mNum);
 
             let useAltFt = altFt;
             if (!isFinite(useAltFt)) {
