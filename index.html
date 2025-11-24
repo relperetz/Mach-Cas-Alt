@@ -36,7 +36,7 @@
             align-items: center;
         }
 
-        /* הסרת החיצים המובנים של input=number */
+        /* הסרת החיצים של input number */
         input[type=number]::-webkit-outer-spin-button,
         input[type=number]::-webkit-inner-spin-button {
             -webkit-appearance: none;
@@ -181,7 +181,6 @@
             align-items: stretch;
             gap: 6px;
             border-radius: 12px;
-            /* אין padding כדי שהרוחב יהיה בדיוק כמו הטאב */
         }
 
         .param-stack.active-solve {
@@ -347,11 +346,13 @@
             text-align: left;
         }
 
-        input[type="range"] {
+        /* רק ISA מקבל רוחב קבוע יחסי, שאר הסליידרים 100% מהעמודה */
+        #isaSlider {
             width: 220px;
+            max-width: 100%;
         }
 
-        /* מובייל – מצמצמים רוחב כדי לא להיחתך */
+        /* מובייל */
         @media (max-width: 480px) {
             body {
                 padding: 12px 8px;
@@ -401,7 +402,7 @@
             </button>
         </div>
 
-        <!-- Inputs under each tab -->
+        <!-- Inputs -->
         <div class="form-rows">
             <div class="param-inline-row">
                 <!-- CAS -->
