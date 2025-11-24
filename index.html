@@ -168,12 +168,12 @@
             margin-top: 6px;
         }
 
-        /* גריד חדש של 3 פרמטרים בעמודות */
+        /* ===== פרמטרים בשורה אחת בדסקטופ, אחד מתחת לשני במובייל ===== */
         .param-grid {
             display: flex;
             gap: 10px;
             justify-content: space-between;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
         }
 
         .param-col {
@@ -391,6 +391,22 @@
             width: 220px;
         }
 
+        /* === מובייל: פרמטרים אחד מתחת לשני, בלי חפיפות === */
+        @media (max-width: 680px) {
+            .card {
+                padding: 16px 12px 14px;
+            }
+
+            .param-grid {
+                flex-direction: column;
+                flex-wrap: nowrap;
+            }
+
+            .param-col {
+                padding: 4px 0;
+            }
+        }
+
         @media (max-width: 720px) {
             .form-row {
                 grid-template-columns: 1fr;
@@ -433,7 +449,7 @@
         </div>
 
         <div class="form-rows">
-            <!-- גריד חדש של שלושת הפרמטרים -->
+            <!-- גריד של שלושת הפרמטרים -->
             <div class="param-grid">
                 <!-- CAS -->
                 <div class="param-col input-wrapper" id="casWrapper">
@@ -557,7 +573,7 @@
         let isaDeviationC = 0;
         let lastTouchPos = null;
 
-        // נוף לזום – ברירת מחדל: 300–600 kt, 10,000–30,000 ft
+        // default view window: 300–600 kt, 10k–30k ft
         let viewCasMin = 300;
         let viewCasMax = 600;
         let viewAltMin = 10000;
@@ -565,7 +581,7 @@
 
         // pinch state
         let isPinching = false;
-        let pinchOrientation = null; // 'horizontal' or 'vertical'
+        let pinchOrientation = null;
         let pinchStartDist = 0;
         let pinchStartViewCasMin = viewCasMin;
         let pinchStartViewCasMax = viewCasMax;
@@ -586,7 +602,6 @@
             setSolveEnabled(true);
         }
 
-        // ===== ISA & atmosphere =====
         function isaAtAltitude(hMeters) {
             let T, p;
             if (hMeters <= 11000.0) {
@@ -685,7 +700,6 @@
             return 0.5 * (lo + hi);
         }
 
-        // ===== mapping (with zoomed view) =====
         function xFromCas(cas) {
             const frac = (cas - viewCasMin) / (viewCasMax - viewCasMin);
             return marginLeft + frac * (canvas.width - marginLeft - marginRight);
@@ -733,7 +747,6 @@
             }
         }
 
-        // ===== result box helper =====
         function setResultBoxFromValues(M, cas, altFt) {
             if (!isFinite(M) || !isFinite(cas) || !isFinite(altFt)) return;
             const tasVal = tasFromPoint({ M, altFt });
@@ -748,7 +761,6 @@
                 `ISA: <b>${dIsaStr}</b>`;
         }
 
-        // ===== axes & grid =====
         function drawAxesAndGrid() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = "#020617";
@@ -781,16 +793,14 @@
             // axes
             ctx.strokeStyle = "#9ca3af";
             ctx.lineWidth = 1.2;
-            // X axis
-            ctx.beginPath();
             const xAxisY = yFromAlt(viewAltMin);
+            ctx.beginPath();
             ctx.moveTo(xFromCas(viewCasMin), xAxisY);
             ctx.lineTo(xFromCas(viewCasMax), xAxisY);
             ctx.stroke();
 
-            // Y axis
-            ctx.beginPath();
             const yAxisX = xFromCas(viewCasMin);
+            ctx.beginPath();
             ctx.moveTo(yAxisX, yFromAlt(viewAltMin));
             ctx.lineTo(yAxisX, yFromAlt(viewAltMax));
             ctx.stroke();
@@ -887,15 +897,14 @@
         }
 
         function drawMachLines(highlightMach) {
-            // צבעים שונים, רכים
             const colors = [
-                "#94a3b8", // slate-400
-                "#a5b4fc", // indigo-300
-                "#fbbf24", // amber-400
-                "#6ee7b7", // emerald-300
-                "#f9a8d4", // pink-300
-                "#7dd3fc", // sky-300
-                "#c4b5fd"  // violet-300
+                "#94a3b8",
+                "#a5b4fc",
+                "#fbbf24",
+                "#6ee7b7",
+                "#f9a8d4",
+                "#7dd3fc",
+                "#c4b5fd"
             ];
 
             for (let i = 0; i < machLinesData.length; i++) {
@@ -908,8 +917,6 @@
                 for (let j = 0; j < pts.length; j++) {
                     const cas = pts[j].cas;
                     const altFt = pts[j].altFt;
-
-                    // חיתוך לפי חלון הגובה והמהירות כדי שלא ירד מתחת לציר X
                     if (cas < viewCasMin || cas > viewCasMax) continue;
                     if (altFt < viewAltMin || altFt > viewAltMax) continue;
 
@@ -934,7 +941,7 @@
                 ctx.stroke();
             }
 
-            // Mach labels – במרכז החלון הנוכחי
+            // labels בגובה אמצעי החלון
             const labelAltFt = (viewAltMin + viewAltMax) / 2;
             ctx.font = "11px system-ui";
             ctx.fillStyle = "#bfdbfe";
@@ -1033,7 +1040,6 @@
             }
         }
 
-        // ===== find nearest mach line point =====
         function findNearestOnLines(mx, my) {
             const thresholdPx = 12;
 
@@ -1067,18 +1073,15 @@
             const hM = findAltitudeForCasAndMach(bestLine.M, snappedCas);
             if (hM === null) return null;
             const altFt = hM * FT_PER_M;
-
             if (altFt < viewAltMin || altFt > viewAltMax) return null;
 
             return { M: bestLine.M, cas: snappedCas, altFt: altFt };
         }
 
-        // === גרירת נקודה נעולה, עם קוונטות לפי הפרמטר המחושב ===
         function updateLockedPointFromY(my) {
             if (!lockedPoint) return;
 
             if (calcMode === "solveAlt") {
-                // הפרמטר לחישוב הוא גובה → CAS בקוונטות של 5 kt
                 let altApprox = altFromY(my);
                 if (altApprox < ALT_MIN) altApprox = ALT_MIN;
                 if (altApprox > ALT_MAX) altApprox = ALT_MAX;
@@ -1096,13 +1099,11 @@
 
                 lockedPoint = { M: lockedPoint.M, cas: casSnapped, altFt: altFt2 };
             } else {
-                // ברירת מחדל – גובה מקוונט לפי הדרישה של solveCas
                 let alt = altFromY(my);
                 if (alt < ALT_MIN) alt = ALT_MIN;
                 if (alt > ALT_MAX) alt = ALT_MAX;
 
                 if (calcMode === "solveCas") {
-                    // הפרמטר לחישוב הוא CAS → גובה בקוונטות של 500 ft
                     alt = Math.round(alt / 500) * 500;
                 }
 
@@ -1186,7 +1187,6 @@
             }
         }
 
-        // ===== mouse events =====
         canvas.addEventListener('mousemove', (e) => {
             const rect = canvas.getBoundingClientRect();
             const mx = e.clientX - rect.left;
@@ -1213,7 +1213,6 @@
             }
         });
 
-        // Mouse wheel zoom – אופקי (CAS)
         canvas.addEventListener('wheel', (e) => {
             e.preventDefault();
             const rect = canvas.getBoundingClientRect();
@@ -1245,12 +1244,10 @@
             handlePointerClick(mx, my);
         });
 
-        // ===== touch events (pinch zoom + drag) =====
         canvas.addEventListener('touchstart', (e) => {
             const rect = canvas.getBoundingClientRect();
 
             if (e.touches.length === 2) {
-                // start pinch
                 isPinching = true;
                 dragLockedTouch = false;
 
@@ -1288,7 +1285,6 @@
             const rect = canvas.getBoundingClientRect();
 
             if (e.touches.length === 2) {
-                // pinch zoom
                 e.preventDefault();
                 const t1 = e.touches[0];
                 const t2 = e.touches[1];
@@ -1372,7 +1368,6 @@
             }
         });
 
-        // ===== API from panel to graph =====
         window.highlightMachCasAlt = function (M, cas, altFt) {
             const mNum = Number(M);
             const casNum = Number(cas);
@@ -1413,7 +1408,6 @@
                 `LOCKED (API) → Mach ${mNum.toFixed(2)} | CAS ${casNum.toFixed(1)} kt | Alt ${altNum.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
         };
 
-        // ===== panel calc =====
         function runAeroCalcFromPanel() {
             let M = parseFloat(document.getElementById('machInput').value);
             let cas = parseFloat(document.getElementById('casInput').value);
@@ -1476,7 +1470,6 @@
                 return;
             }
 
-            // sync sliders with solved values
             document.getElementById('casSlider').value = solvedCas;
             document.getElementById('machSlider').value = solvedM;
             document.getElementById('altSlider').value = solvedAlt;
@@ -1489,7 +1482,6 @@
             setSolveEnabled(false);
         }
 
-        // ===== calcMode & UI highlight =====
         function setCalcMode(mode) {
             calcMode = mode;
 
@@ -1521,7 +1513,6 @@
             machWrapper.classList.remove('active-solve');
             altWrapper.classList.remove('active-solve');
 
-            // reset disabled
             casInput.disabled = false;
             machInput.disabled = false;
             altInput.disabled = false;
@@ -1555,7 +1546,6 @@
             markChanged();
         }
 
-        // ===== layout =====
         function resizeCanvas() {
             const container = document.getElementById('container');
             const maxWidth = 600;
@@ -1569,7 +1559,6 @@
 
         window.addEventListener('resize', resizeCanvas);
 
-        // ===== controls: spin buttons & sliders =====
         function attachSpinButtons() {
             document.querySelectorAll('.spin-buttons').forEach(spin => {
                 const targetId = spin.dataset.target;
@@ -1590,7 +1579,6 @@
                     if (max !== null && v > max) v = max;
                     input.value = step >= 1 ? v.toFixed(0) : v.toFixed(2);
 
-                    // sync sliders
                     if (targetId === 'casInput') {
                         document.getElementById('casSlider').value = v;
                     } else if (targetId === 'machInput') {
@@ -1685,7 +1673,6 @@
             document.getElementById('tabMach').addEventListener('click', () => setCalcMode("solveMach"));
             document.getElementById('tabAlt').addEventListener('click', () => setCalcMode("solveAlt"));
 
-            // בחירת פרמטר ע"י לחיצה על השם
             document.getElementById('casLabel').addEventListener('click', () => setCalcMode("solveCas"));
             document.getElementById('machLabel').addEventListener('click', () => setCalcMode("solveMach"));
             document.getElementById('altLabel').addEventListener('click', () => setCalcMode("solveAlt"));
@@ -1694,7 +1681,6 @@
             attachParamSliders();
             attachTextInputSync();
 
-            // מצב התחלתי: Alt הוא המחושב
             setCalcMode("solveAlt");
             resizeCanvas();
             setSolveEnabled(false);
