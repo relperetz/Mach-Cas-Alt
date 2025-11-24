@@ -36,7 +36,7 @@
             align-items: center;
         }
 
-        /* הסרת החיצים של input=number */
+        /* הסרת החיצים המובנים של input=number */
         input[type=number]::-webkit-outer-spin-button,
         input[type=number]::-webkit-inner-spin-button {
             -webkit-appearance: none;
@@ -121,7 +121,7 @@
             text-align: center;
         }
 
-        /* כפתורי הפרמטר + שורת הערכים מתחת */
+        /* Tabs */
         .tabs {
             display: flex;
             gap: 10px;
@@ -130,7 +130,7 @@
         }
 
         .tab {
-            flex: 1;
+            flex: 1 1 0;
             padding: 10px 8px 8px;
             border-radius: 12px;
             border: 1px solid var(--border-subtle);
@@ -175,13 +175,13 @@
         }
 
         .param-stack {
-            flex: 1;
+            flex: 1 1 0;
             display: flex;
             flex-direction: column;
             align-items: stretch;
             gap: 6px;
             border-radius: 12px;
-            padding: 4px 2px 6px;
+            /* אין padding כדי שהרוחב יהיה בדיוק כמו הטאב */
         }
 
         .param-stack.active-solve {
@@ -200,8 +200,7 @@
             text-align: center;
             outline: none;
             transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
-            width: 96%;
-            margin: 0 auto;
+            width: 100%;
         }
 
         .value-input:focus {
@@ -216,8 +215,7 @@
         }
 
         .param-slider {
-            width: 96%;
-            margin: 0 auto;
+            width: 100%;
         }
 
         .spin-buttons-row {
@@ -353,9 +351,21 @@
             width: 220px;
         }
 
-        @media (max-width: 680px) {
-            .card {
-                padding: 16px 12px 14px;
+        /* מובייל – מצמצמים רוחב כדי לא להיחתך */
+        @media (max-width: 480px) {
+            body {
+                padding: 12px 8px;
+            }
+
+            .card,
+            #container {
+                max-width: 360px;
+                margin: 0 auto;
+            }
+
+            .tabs,
+            .param-inline-row {
+                gap: 6px;
             }
         }
     </style>
@@ -501,14 +511,14 @@
         let highlightAltTick = null;
         let isaDeviationC = 0;
 
-        // view window
+        // view window (default)
         let viewCasMin = 300;
         let viewCasMax = 600;
         let viewAltMin = 10000;
         let viewAltMax = 30000;
 
         // dynamic tick steps
-        let casMinorStep = 10, casLabelStep = 50;
+        let casMinorStep = 50, casLabelStep = 100;
         let altMinorStep = 1000, altLabelStep = 5000;
 
         // pinch / pan
@@ -662,16 +672,24 @@
                 `ISA: <b>${dIsaStr}</b>`;
         }
 
-        // ==== Axes & grid (with dynamic ticks) ====
+        // ==== Axes & grid (dynamic ticks) ====
         function drawAxesAndGrid() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = "#020617";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+            // X ticks – ברירת מחדל 100 קשר, בזום יותר צפוף
             const casSpan = viewCasMax - viewCasMin;
-            if (casSpan <= 150) { casMinorStep = 5; casLabelStep = 25; }
-            else if (casSpan <= 300) { casMinorStep = 10; casLabelStep = 25; }
-            else { casMinorStep = 10; casLabelStep = 50; }
+            if (casSpan > 350) {        // רחב – 100
+                casMinorStep = 50;
+                casLabelStep = 100;
+            } else if (casSpan > 180) { // בינוני – 50
+                casMinorStep = 25;
+                casLabelStep = 50;
+            } else {                    // זום עמוק – 20
+                casMinorStep = 10;
+                casLabelStep = 20;
+            }
 
             const altSpan = viewAltMax - viewAltMin;
             if (altSpan <= 5000) { altMinorStep = 250; altLabelStep = 1000; }
@@ -1163,12 +1181,12 @@
                 let x2 = t2.clientX - rect.left, y2 = t2.clientY - rect.top;
                 const dx = x2 - x1, dy = y2 - y1;
 
-                let distAxis = pinchOrientation === 'horizontal' ? Math.abs(dx) : Math.abs(dy);
+                let distAxis = (pinchOrientation === 'horizontal') ? Math.abs(dx) : Math.abs(dy);
                 if (distAxis <= 0 || pinchStartDist <= 0) return;
 
                 const factor = pinchStartDist / distAxis;
 
-                // zoom around center (from initial view)
+                // zoom (באופן בלתי תלוי בציר)
                 if (pinchOrientation === 'horizontal') {
                     let width0 = pinchStartViewCasMax - pinchStartViewCasMin;
                     let newWidth = width0 * factor;
@@ -1193,7 +1211,7 @@
                     viewAltMax = newMaxAlt;
                 }
 
-                // pan לפי תזוזת מרכז האצבעות
+                // pan – לפי תזוזת מרכז שתי האצבעות
                 const midX = (x1 + x2) / 2;
                 const midY = (y1 + y2) / 2;
                 const midCas = casFromX(midX);
@@ -1242,7 +1260,7 @@
             }
         });
 
-        // API להדגשת נקודה
+        // API
         window.highlightMachCasAlt = function (M, cas, altFt) {
             const mNum = Number(M), casNum = Number(cas);
             if (!isFinite(mNum) || !isFinite(casNum)) return;
