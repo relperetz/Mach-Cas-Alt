@@ -36,7 +36,7 @@
             align-items: center;
         }
 
-        /* הסרת החיצים הלבנים של input type=number (כרום/פיירפוקס) */
+        /* הסרת החיצים של input type=number בדפדפנים */
         input[type=number]::-webkit-outer-spin-button,
         input[type=number]::-webkit-inner-spin-button {
             -webkit-appearance: none;
@@ -45,6 +45,23 @@
 
         input[type=number] {
             -moz-appearance: textfield;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin: 8px 0 4px;
+            text-align: left;
+            width: 100%;
+            max-width: 960px;
+        }
+
+        .subtitle {
+            width: 100%;
+            max-width: 960px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            text-align: left;
         }
 
         .card {
@@ -229,7 +246,6 @@
             background: #030712;
         }
 
-        /* כפתור חישוב – כולל מצב disabled */
         .primary-btn {
             border: none;
             border-radius: 999px;
@@ -260,7 +276,6 @@
             opacity: 0.9;
         }
 
-        /* שורת כפתור – למרכז את הכפתור */
         .action-wrapper {
             justify-content: center;
         }
@@ -334,13 +349,16 @@
             }
 
             .solve-label {
-                text-align: center;
+                text-align: right;
             }
         }
     </style>
 </head>
 
 <body>
+    <h1>Aeronautical Calculator</h1>
+    <div class="subtitle">CAS · Mach · Altitude – מחשבון אווירי + גרף אינטראקטיבי</div>
+
     <div class="card">
         <div class="card-header">
             <div class="title-block">
@@ -478,28 +496,23 @@
         let viewCasMin = CAS_MIN;
         let viewCasMax = CAS_MAX;
 
+        let isPinching = false;
+        let pinchStartDist = 0;
+        let pinchStartViewCasMin = CAS_MIN;
+        let pinchStartViewCasMax = CAS_MAX;
+        let dragLockedTouch = false;
+
         let calcMode = "solveAlt";
         let hasPendingChanges = false;
 
         function setSolveEnabled(enabled) {
             if (!solveButton) return;
-            if (enabled) {
-                solveButton.disabled = false;
-            } else {
-                solveButton.disabled = true;
-            }
+            solveButton.disabled = !enabled;
         }
 
         function markChanged() {
             hasPendingChanges = true;
             setSolveEnabled(true);
-        }
-
-        function buildData() {
-            machLinesData = [];
-            for (const M of machValues) {
-                machLinesData.push(buildMachLineData(M));
-            }
         }
 
         function isaAtAltitude(hMeters) {
@@ -928,6 +941,24 @@
             return { M: bestLine.M, cas: snappedCas, altFt: altFt };
         }
 
+        function updateLockedPointFromY(my) {
+            if (!lockedPoint) return;
+            let alt = altFromY(my);
+            if (alt < ALT_MIN) alt = ALT_MIN;
+            if (alt > ALT_MAX) alt = ALT_MAX;
+            const altM = alt / FT_PER_M;
+            const cas = casFromMachAndAlt(lockedPoint.M, altM);
+            lockedPoint = { M: lockedPoint.M, cas: cas, altFt: alt };
+            highlightCasTick = Math.round(cas / 50) * 50;
+            highlightAltTick = Math.round(alt / 5000) * 5000;
+            redraw(lockedPoint);
+            const tas = tasFromPoint(lockedPoint);
+            const tasStr = tas ? tas.toFixed(1) : "N/A";
+            const deltaStr = (isaDeviationC >= 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
+            infoDiv.textContent =
+                `LOCKED → Mach ${lockedPoint.M.toFixed(2)} | CAS ${lockedPoint.cas.toFixed(1)} kt | Alt ${lockedPoint.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
+        }
+
         function handlePointerMove(mx, my) {
             if (lockedPoint) {
                 highlightCasTick = Math.round(lockedPoint.cas / 50) * 50;
@@ -972,15 +1003,6 @@
         }
 
         function handlePointerClick(mx, my) {
-            if (lockedPoint) {
-                lockedPoint = null;
-                highlightCasTick = null;
-                highlightAltTick = null;
-                redraw(null);
-                infoDiv.textContent = "Lock released. Move mouse or finger near a Mach line…";
-                return;
-            }
-
             if (mx < marginLeft || mx > canvas.width - marginRight ||
                 my < marginTop || my > canvas.height - marginBottom) return;
 
@@ -1023,6 +1045,31 @@
             }
         });
 
+        // Mouse wheel zoom (CAS axis)
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const zoomFactor = e.deltaY < 0 ? 0.9 : 1.1;
+            const centerCas = casFromX(mx);
+            const width = viewCasMax - viewCasMin;
+            let newWidth = width * zoomFactor;
+            newWidth = Math.max(50, Math.min(CAS_MAX - CAS_MIN, newWidth));
+            let newMin = centerCas - newWidth / 2;
+            let newMax = centerCas + newWidth / 2;
+            if (newMin < CAS_MIN) {
+                newMin = CAS_MIN;
+                newMax = CAS_MIN + newWidth;
+            }
+            if (newMax > CAS_MAX) {
+                newMax = CAS_MAX;
+                newMin = CAS_MAX - newWidth;
+            }
+            viewCasMin = newMin;
+            viewCasMax = newMax;
+            redraw(currentPoint || lockedPoint || null);
+        }, { passive: false });
+
         canvas.addEventListener('click', (e) => {
             const rect = canvas.getBoundingClientRect();
             const mx = e.clientX - rect.left;
@@ -1032,30 +1079,101 @@
 
         canvas.addEventListener('touchstart', (e) => {
             const rect = canvas.getBoundingClientRect();
-            const touch = e.touches[0];
-            const mx = touch.clientX - rect.left;
-            const my = touch.clientY - rect.top;
-            lastTouchPos = { x: mx, y: my };
-            handlePointerMove(mx, my);
+
+            if (e.touches.length === 2) {
+                // start pinch
+                isPinching = true;
+                dragLockedTouch = false;
+                const t1 = e.touches[0];
+                const t2 = e.touches[1];
+                const dx = t2.clientX - t1.clientX;
+                const dy = t2.clientY - t1.clientY;
+                pinchStartDist = Math.hypot(dx, dy);
+                pinchStartViewCasMin = viewCasMin;
+                pinchStartViewCasMax = viewCasMax;
+                return;
+            }
+
+            if (e.touches.length === 1) {
+                const touch = e.touches[0];
+                const mx = touch.clientX - rect.left;
+                const my = touch.clientY - rect.top;
+                lastTouchPos = { x: mx, y: my };
+
+                if (lockedPoint) {
+                    // start dragging along Mach line
+                    dragLockedTouch = true;
+                    updateLockedPointFromY(my);
+                } else {
+                    dragLockedTouch = false;
+                    handlePointerMove(mx, my);
+                }
+            }
         }, { passive: true });
 
         canvas.addEventListener('touchmove', (e) => {
-            e.preventDefault();
             const rect = canvas.getBoundingClientRect();
-            const touch = e.touches[0];
-            const mx = touch.clientX - rect.left;
-            const my = touch.clientY - rect.top;
-            lastTouchPos = { x: mx, y: my };
-            handlePointerMove(mx, my);
+
+            if (e.touches.length === 2) {
+                // pinch zoom
+                e.preventDefault();
+                const t1 = e.touches[0];
+                const t2 = e.touches[1];
+                const dx = t2.clientX - t1.clientX;
+                const dy = t2.clientY - t1.clientY;
+                const dist = Math.hypot(dx, dy);
+                if (pinchStartDist > 0) {
+                    const factor = pinchStartDist / dist;
+                    let width0 = pinchStartViewCasMax - pinchStartViewCasMin;
+                    let newWidth = width0 * factor;
+                    newWidth = Math.max(50, Math.min(CAS_MAX - CAS_MIN, newWidth));
+                    const center = (pinchStartViewCasMin + pinchStartViewCasMax) / 2;
+                    let newMin = center - newWidth / 2;
+                    let newMax = center + newWidth / 2;
+                    if (newMin < CAS_MIN) {
+                        newMin = CAS_MIN;
+                        newMax = CAS_MIN + newWidth;
+                    }
+                    if (newMax > CAS_MAX) {
+                        newMax = CAS_MAX;
+                        newMin = CAS_MAX - newWidth;
+                    }
+                    viewCasMin = newMin;
+                    viewCasMax = newMax;
+                    redraw(currentPoint || lockedPoint || null);
+                }
+                return;
+            }
+
+            if (e.touches.length === 1) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const mx = touch.clientX - rect.left;
+                const my = touch.clientY - rect.top;
+                lastTouchPos = { x: mx, y: my };
+
+                if (dragLockedTouch && lockedPoint) {
+                    updateLockedPointFromY(my);
+                } else {
+                    handlePointerMove(mx, my);
+                }
+            }
         }, { passive: false });
 
-        canvas.addEventListener('touchend', () => {
-            if (lastTouchPos) {
-                handlePointerClick(lastTouchPos.x, lastTouchPos.y);
+        canvas.addEventListener('touchend', (e) => {
+            if (e.touches.length < 2) {
+                isPinching = false;
+            }
+            if (e.touches.length === 0) {
+                if (lastTouchPos && !dragLockedTouch) {
+                    handlePointerClick(lastTouchPos.x, lastTouchPos.y);
+                }
                 lastTouchPos = null;
+                dragLockedTouch = false;
             }
         });
 
+        // API
         window.highlightMachCasAlt = function (M, cas, altFt) {
             const mNum = Number(M);
             const casNum = Number(cas);
@@ -1294,6 +1412,13 @@
             resizeCanvas();
             setSolveEnabled(false);
         });
+
+        function buildData() {
+            machLinesData = [];
+            for (const M of machValues) {
+                machLinesData.push(buildMachLineData(M));
+            }
+        }
 
         buildData();
     </script>
