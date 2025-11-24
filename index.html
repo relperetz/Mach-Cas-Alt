@@ -85,7 +85,6 @@
       font-size: 1.0rem;
       color: var(--text-muted);
       text-align: center;
-      
     }
 
     .tabs-row {
@@ -115,12 +114,16 @@
       flex-direction: column;
       gap: 4px;
       transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+      -webkit-appearance: none;
+      appearance: none;
+      align-items: center;
     }
 
     .tab-label-row {
       display: flex;
       justify-content: center;
       align-items: baseline;
+      width: 100%;
     }
 
     .tab .main-label {
@@ -175,13 +178,13 @@
     }
 
     .spin-buttons button {
-      width: 30px;
-      height: 24px;
+      width: 60px;
+      height: 40px;
       border-radius: 6px;
       border: 1px solid #374151;
       background: #020617;
       color: #e5e7eb;
-      font-size: 0.8rem;
+      font-size: 1.2rem;
       padding: 0;
       cursor: pointer;
     }
@@ -194,15 +197,6 @@
     .param-block.output-param .param-slider,
     .param-block.output-param .spin-buttons-row {
       display: none !important;
-    }
-
-    #machDial {
-      display: block;
-      margin: 6px auto 0 auto;
-      width: 100%;
-      max-width: 120px;
-      height: auto;
-      touch-action: none;
     }
 
     .primary-btn {
@@ -357,7 +351,7 @@
           <input id="machInput" type="number" step="0.01" value="0.80" class="value-input">
           <div class="unit-label">M</div>
         </button>
-        <canvas id="machDial" width="120" height="120"></canvas>
+        <!-- Dial removed -->
         <input id="machSlider" class="param-slider" type="range" min="0.6" max="1.2" step="0.01" value="0.80">
         <div class="spin-buttons-row">
           <div class="spin-buttons" id="machSpin" data-target="machInput" data-step="0.01" data-min="0.6" data-max="1.2">
@@ -474,6 +468,7 @@
     let lastTouchPos = null;
     let dragLockedTouch = false;
 
+    // dial vars stay but dial element הוסר – הפונקציות ייצאו פשוט בלי לצייר
     let machDialCanvas = null;
     let machDialCtx = null;
     let machDialDragging = false;
@@ -568,97 +563,12 @@
     }
 
     function drawMachDial() {
+      // dial element removed – keep function no-op-safe
       if (!machDialCanvas || !machDialCtx) return;
-      const ctxD = machDialCtx;
-      const w = machDialCanvas.width;
-      const h = machDialCanvas.height;
-      const cx = w / 2;
-      const cy = h / 2;
-      const radius = Math.min(w, h) / 2 - 6;
-
-      ctxD.clearRect(0, 0, w, h);
-      ctxD.fillStyle = "#020617";
-      ctxD.fillRect(0, 0, w, h);
-
-      ctxD.beginPath();
-      ctxD.arc(cx, cy, radius, 0, 2 * Math.PI);
-      ctxD.fillStyle = "#0b1120";
-      ctxD.fill();
-      ctxD.strokeStyle = "#4b5563";
-      ctxD.lineWidth = 2;
-      ctxD.stroke();
-
-      ctxD.save();
-      ctxD.translate(cx, cy);
-      const minM = 0.6, maxM = 1.2;
-      const sweepDeg = 270;
-      for (let m = minM; m <= maxM + 1e-6; m += 0.1) {
-        const frac = (m - minM) / (maxM - minM);
-        const deg = -135 + frac * sweepDeg;
-        const rad = deg * Math.PI / 180;
-        const rOuter = radius - 4;
-        const rInner = radius - 10;
-        const x1 = rInner * Math.cos(rad);
-        const y1 = rInner * Math.sin(rad);
-        const x2 = rOuter * Math.cos(rad);
-        const y2 = rOuter * Math.sin(rad);
-        ctxD.beginPath();
-        ctxD.moveTo(x1, y1);
-        ctxD.lineTo(x2, y2);
-        ctxD.strokeStyle = "#6b7280";
-        ctxD.lineWidth = 1.2;
-        ctxD.stroke();
-      }
-
-      const M = getMachValue();
-      const fracM = (M - minM) / (maxM - minM);
-      const angleDeg = -135 + fracM * sweepDeg;
-      const angleRad = angleDeg * Math.PI / 180;
-      const rNeedle = radius - 14;
-      const nx = rNeedle * Math.cos(angleRad);
-      const ny = rNeedle * Math.sin(angleRad);
-
-      ctxD.beginPath();
-      ctxD.moveTo(0, 0);
-      ctxD.lineTo(nx, ny);
-      ctxD.strokeStyle = "#38bdf8";
-      ctxD.lineWidth = 2;
-      ctxD.stroke();
-
-      ctxD.beginPath();
-      ctxD.arc(0, 0, 4, 0, 2 * Math.PI);
-      ctxD.fillStyle = "#38bdf8";
-      ctxD.fill();
-
-      ctxD.fillStyle = "#e5e7eb";
-      ctxD.font = "11px system-ui";
-      ctxD.textAlign = "center";
-      ctxD.textBaseline = "middle";
-      ctxD.fillText(M.toFixed(2) + " M", 0, radius * -0.4);
-
-      ctxD.restore();
     }
 
     function machDialSetByPointer(clientX, clientY) {
       if (!machDialCanvas) return;
-      const rect = machDialCanvas.getBoundingClientRect();
-      const cx = rect.left + rect.width / 2;
-      const cy = rect.top + rect.height / 2;
-      const dx = clientX - cx;
-      const dy = clientY - cy;
-      let angle = Math.atan2(dy, dx);
-      let deg = angle * 180 / Math.PI;
-      if (deg < -135) deg = -135;
-      if (deg > 135) deg = 135;
-      const frac = (deg + 135) / 270;
-      let M = 0.6 + frac * (1.2 - 0.6);
-      M = Math.round(M * 100) / 100;
-      const machInput = document.getElementById('machInput');
-      const machSlider = document.getElementById('machSlider');
-      machInput.value = M.toFixed(2);
-      if (machSlider) machSlider.value = M;
-      drawMachDial();
-      markChanged();
     }
 
     function xFromCas(cas) {
@@ -1275,7 +1185,7 @@
       if (casSlider) casSlider.value = solvedCas;
       if (machSlider) machSlider.value = solvedM;
       if (altSlider) altSlider.value = solvedAlt;
-      drawMachDial();
+
       setResultBoxFromValues(solvedM, solvedCas, solvedAlt);
       addMachLineIfMissing(solvedM);
       window.highlightMachCasAlt(solvedM, solvedCas, solvedAlt);
@@ -1504,8 +1414,8 @@
       initParamSelection();
       applyModeFromInputs();
       resizeCanvas();
-      setSolveEnabled(false);
-      resultDiv.textContent = "Result will appear here…";
+      // חישוב אוטומטי לפי ברירות מחדל (CAS=350, Mach=0.80) + ציור נקודה
+      runAeroCalcFromPanel();
     });
 
     buildData();
