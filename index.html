@@ -1,756 +1,1514 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
-
 <head>
-    <meta charset="UTF-8">
-    <title>Aeronautical Calculator – Mach · CAS · Altitude</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        :root {
-            --bg-main: #05070c;
-            --bg-card: #0d141f;
-            --bg-card-elevated: #111827;
-            --bg-input: #111827;
-            --bg-input-focus: #020617;
-            --border-subtle: #1f2933;
-            --accent: #38bdf8;
-            --accent-soft: rgba(56, 189, 248, 0.16);
-            --accent-strong: #0ea5e9;
-            --text-main: #e5e7eb;
-            --text-muted: #9ca3af;
-            --danger: #f97373;
-        }
+  <meta charset="UTF-8">
+  <title>Aeronautical Calculator – Mach · CAS · Altitude</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --bg-main: #05070c;
+      --bg-card: #0d141f;
+      --bg-card-elevated: #111827;
+      --bg-input: #111827;
+      --bg-input-focus: #020617;
+      --border-subtle: #1f2933;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56, 189, 248, 0.16);
+      --accent-strong: #0ea5e9;
+      --text-main: #e5e7eb;
+      --text-muted: #9ca3af;
+      --danger: #f97373;
+    }
 
-        * {
-            box-sizing: border-box;
-        }
+    * { box-sizing: border-box; }
 
-        body {
-            margin: 0;
-            padding: 16px;
-            background: radial-gradient(circle at top, #020617 0, #020617 40%, #020617 60%, #000 100%);
-            color: var(--text-main);
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
+    body {
+      margin: 0;
+      padding: 16px;
+      background: radial-gradient(circle at top, #020617 0, #020617 40%, #020617 60%, #000 100%);
+      color: var(--text-main);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
 
-        /* הסרת החיצים של input number */
-        input[type=number]::-webkit-outer-spin-button,
-        input[type=number]::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
+    input[type=number]::-webkit-outer-spin-button,
+    input[type=number]::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type=number] { -moz-appearance: textfield; }
 
-        input[type=number] {
-            -moz-appearance: textfield;
-        }
+    .card {
+      width: 100%;
+      max-width: 960px;
+      background: radial-gradient(circle at top left, #111827 0, #020617 65%);
+      border-radius: 18px;
+      border: 1px solid #111827;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.8), 0 0 0 1px rgba(15, 23, 42, 0.9);
+      padding: 18px 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
 
-        .card {
-            width: 100%;
-            max-width: 960px;
-            background: radial-gradient(circle at top left, #111827 0, #020617 65%);
-            border-radius: 18px;
-            border: 1px solid #111827;
-            box-shadow:
-                0 18px 40px rgba(15, 23, 42, 0.8),
-                0 0 0 1px rgba(15, 23, 42, 0.9);
-            padding: 18px 20px 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
+    .card-header {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
 
-        .card-header {
-            display: flex;
-            flex-direction: column;
-            align-items: stretch;
-            gap: 10px;
-        }
+    .title-block {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
 
-        .title-block {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
+    .icon-circle {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: radial-gradient(circle at 20% 0, #38bdf8, #0f172a 70%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 1.4rem;
+      box-shadow: 0 8px 20px rgba(56, 189, 248, 0.4);
+    }
 
-        .icon-circle {
-            width: 44px;
-            height: 44px;
-            border-radius: 14px;
-            background: radial-gradient(circle at 20% 0, #38bdf8, #0f172a 70%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1.4rem;
-            box-shadow: 0 8px 20px rgba(56, 189, 248, 0.4);
-        }
+    .title-main { font-size: 1.15rem; font-weight: 600; }
+    .title-sub { font-size: 0.8rem; color: var(--text-muted); }
 
-        .title-main {
-            font-size: 1.15rem;
-            font-weight: 600;
-        }
+    .solve-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
 
-        .title-sub {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-        }
+    .tabs-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+      margin-bottom: 6px;
+    }
 
-        .solve-label {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            text-align: center;
-        }
+    .param-block {
+      flex: 1 1 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
 
-        /* שלושת הפרמטרים */
-        .tabs-row {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-            margin-bottom: 6px;
-        }
+    .tab {
+      width: 100%;
+      padding: 8px 10px 8px;
+      border-radius: 12px;
+      border: 1px solid var(--border-subtle);
+      background: #020617;
+      color: var(--text-muted);
+      cursor: pointer;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+    }
 
-        .param-block {
-            flex: 1 1 0;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
+    .tab-label-row {
+      display: flex;
+      justify-content: center;
+      align-items: baseline;
+    }
 
-        /* כפתור עליון עם הערך בפנים */
-        .tab {
-            width: 100%;
-            padding: 8px 10px 8px;
-            border-radius: 12px;
-            border: 1px solid var(--border-subtle);
-            background: #020617;
-            color: var(--text-muted);
-            cursor: pointer;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: stretch;
-            gap: 4px;
-            transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
-        }
+    .tab .main-label {
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
 
-        .tab-label-row {
-            display: flex;
-            justify-content: center;
-            align-items: baseline;
-        }
+    .tab.selected {
+      border-color: var(--accent);
+      background: radial-gradient(circle at top, #0b1120 0, #020617 55%);
+      color: var(--text-main);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.3);
+    }
 
-        .tab span.main-label {
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
+    .value-input {
+      height: 34px;
+      border-radius: 8px;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-input);
+      color: var(--text-main);
+      font-size: 1.15rem;
+      font-weight: 600;
+      padding: 4px 6px;
+      text-align: center;
+      outline: none;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+      width: 100%;
+    }
 
-        /* שני פרמטרי קלט – מסגרת תכלת */
-        .tab.selected {
-            border-color: var(--accent);
-            background: radial-gradient(circle at top, #0b1120 0, #020617 55%);
-            color: var(--text-main);
-            box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.3);
-        }
+    .value-input:focus {
+      border-color: var(--accent);
+      background: var(--bg-input-focus);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.4);
+    }
 
-        /* תיבת ערך בתוך הכפתור – גדולה ובולטת */
-        .value-input {
-            height: 34px;
-            border-radius: 8px;
-            border: 1px solid var(--border-subtle);
-            background: var(--bg-input);
-            color: var(--text-main);
-            font-size: 1.15rem;
-            font-weight: 600;
-            padding: 4px 6px;
-            text-align: center;
-            outline: none;
-            transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
-            width: 100%;
-        }
+    .value-input:disabled { opacity: 0.7; cursor: default; }
 
-        .value-input:focus {
-            border-color: var(--accent);
-            background: var(--bg-input-focus);
-            box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.4);
-        }
+    .unit-label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 2px;
+    }
 
-        .value-input:disabled {
-            opacity: 0.7;
-            cursor: default;
-        }
+    .param-slider { width: 100%; display: none; }
 
-        .unit-label {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            text-align: center;
-            margin-top: 2px;
-        }
+    .spin-buttons-row { display: flex; justify-content: center; }
 
-        /* סליידרים – מוסתרים מהעין, נשארים לקוד */
-        .param-slider {
-            width: 100%;
-            display: none;
-        }
+    .spin-buttons {
+      display: inline-flex;
+      gap: 4px;
+    }
 
-        .spin-buttons-row {
-            display: flex;
-            justify-content: center;
-        }
+    .spin-buttons button {
+      width: 30px;
+      height: 24px;
+      border-radius: 6px;
+      border: 1px solid #374151;
+      background: #020617;
+      color: #e5e7eb;
+      font-size: 0.8rem;
+      padding: 0;
+      cursor: pointer;
+    }
 
-        .spin-buttons {
-            display: inline-flex;
-            gap: 4px;
-        }
+    .spin-buttons button:hover {
+      border-color: #4b5563;
+      background: #030712;
+    }
 
-        .spin-buttons button {
-            width: 30px;
-            height: 24px;
-            border-radius: 6px;
-            border: 1px solid #374151;
-            background: #020617;
-            color: #e5e7eb;
-            font-size: 0.8rem;
-            padding: 0;
-            cursor: pointer;
-        }
+    .param-block.output-param .param-slider,
+    .param-block.output-param .spin-buttons-row {
+      display: none !important;
+    }
 
-        .spin-buttons button:hover {
-            border-color: #4b5563;
-            background: #030712;
-        }
+    #machDial {
+      display: block;
+      margin: 6px auto 0 auto;
+      width: 100%;
+      max-width: 120px;
+      height: auto;
+      touch-action: none;
+    }
 
-        /* פרמטר שהוא תוצאה: לא מציג סליידר ולא חיצים */
-        .param-block.output-param .param-slider,
-        .param-block.output-param .spin-buttons-row {
-            display: none !important;
-        }
+    .primary-btn {
+      border: none;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #38bdf8, #0ea5e9);
+      color: #020617;
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 9px 26px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: 0 12px 30px rgba(56, 189, 248, 0.5), 0 0 0 1px rgba(15, 23, 42, 0.9);
+      text-align: center;
+    }
 
-        /* חוגת Mach – גדולה יותר, כמעט ברוחב הכפתור */
-        #machDial {
-            display: block;
-            margin: 6px auto 0 auto;
-            width: 100%;
-            max-width: 120px;
-            height: auto;
-            touch-action: none;
-        }
+    .primary-btn span.icon { font-size: 1rem; }
 
-        .primary-btn {
-            border: none;
-            border-radius: 999px;
-            background: linear-gradient(90deg, #38bdf8, #0ea5e9);
-            color: #020617;
-            font-size: 0.95rem;
-            font-weight: 600;
-            padding: 9px 26px;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            box-shadow:
-                0 12px 30px rgba(56, 189, 248, 0.5),
-                0 0 0 1px rgba(15, 23, 42, 0.9);
-            text-align: center;
-        }
+    .primary-btn:disabled {
+      background: #030712;
+      color: #6b7280;
+      box-shadow: none;
+      cursor: default;
+      opacity: 0.9;
+    }
 
-        .primary-btn span.icon {
-            font-size: 1rem;
-        }
+    .form-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 6px;
+    }
 
-        .primary-btn:disabled {
-            background: #030712;
-            color: #6b7280;
-            box-shadow: none;
-            cursor: default;
-            opacity: 0.9;
-        }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      align-items: center;
+    }
 
-        .form-rows {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-top: 6px;
-        }
+    .action-wrapper { display: flex; justify-content: center; }
 
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 8px;
-            align-items: center;
-        }
+    .result-box {
+      margin-top: 8px;
+      font-size: 0.82rem;
+      background: #020617;
+      border-radius: 10px;
+      padding: 6px 8px;
+      border: 1px solid #111827;
+      color: var(--text-main);
+      text-align: center;
+    }
 
-        .action-wrapper {
-            display: flex;
-            justify-content: center;
-        }
+    .result-box b { color: var(--accent-strong); }
 
-        .result-box {
-            margin-top: 8px;
-            font-size: 0.82rem;
-            background: #020617;
-            border-radius: 10px;
-            padding: 6px 8px;
-            border: 1px solid #111827;
-            color: var(--text-main);
-            text-align: center;
-        }
+    #container {
+      margin-top: 18px;
+      width: 100%;
+      max-width: 600px;
+    }
 
-        .result-box b {
-            color: var(--accent-strong);
-        }
+    #machCanvas {
+      border-radius: 10px;
+      border: 1px solid #111827;
+      background: #020617;
+      width: 100%;
+      height: auto;
+      display: block;
+    }
 
-        #container {
-            margin-top: 18px;
-            width: 100%;
-            max-width: 600px;
-        }
+    #info {
+      margin-top: 8px;
+      font-size: 0.9rem;
+      text-align: center;
+      min-height: 1.2em;
+    }
 
-        #machCanvas {
-            border-radius: 10px;
-            border: 1px solid #111827;
-            background: #020617;
-            width: 100%;
-            height: auto;
-            display: block;
-        }
+    #legend {
+      margin-top: 4px;
+      font-size: 0.8rem;
+      opacity: 0.8;
+      text-align: center;
+    }
 
-        #info {
-            margin-top: 8px;
-            font-size: 0.9rem;
-            text-align: center;
-            min-height: 1.2em;
-        }
+    #isaControl {
+      margin-top: 4px;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
 
-        #legend {
-            margin-top: 4px;
-            font-size: 0.8rem;
-            opacity: 0.8;
-            text-align: center;
-        }
+    #isaControl span {
+      min-width: 40px;
+      display: inline-block;
+      text-align: left;
+    }
 
-        #isaControl {
-            margin-top: 4px;
-            font-size: 0.85rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-        }
+    #isaSlider {
+      width: 220px;
+      max-width: 100%;
+    }
 
-        #isaControl span {
-            min-width: 40px;
-            display: inline-block;
-            text-align: left;
-        }
-
-        #isaSlider {
-            width: 220px;
-            max-width: 100%;
-        }
-
-        /* מובייל */
-        @media (max-width: 480px) {
-            body {
-                padding: 12px 8px;
-            }
-
-            .card,
-            #container {
-                max-width: 360px;
-                margin: 0 auto;
-            }
-
-            .tabs-row {
-                gap: 6px;
-            }
-        }
-    </style>
+    @media (max-width: 480px) {
+      body { padding: 12px 8px; }
+      .card, #container { max-width: 360px; margin: 0 auto; }
+      .tabs-row { gap: 6px; }
+    }
+  </style>
 </head>
-
 <body>
-    <div class="card">
-        <div class="card-header">
-            <div class="title-block">
-                <div class="icon-circle">✈️</div>
-                <div>
-                    <div class="title-main">Aeronautical Calculator</div>
-                    <div class="title-sub">CAS · Mach · Altitude · TAS · ΔISA</div>
-                </div>
-            </div>
-
-            <div class="solve-label" dir="rtl">
-                בחר שני פרמטרים לקלט – השלישי יחושב עבורך, פרינצי:
-            </div>
+  <div class="card">
+    <div class="card-header">
+      <div class="title-block">
+        <div class="icon-circle">✈️</div>
+        <div>
+          <div class="title-main">Aeronautical Calculator</div>
+          <div class="title-sub">CAS · Mach · Altitude · TAS · ΔISA</div>
         </div>
-
-        <!-- שלושת הפרמטרים: CAS / MACH / ALT -->
-        <div class="tabs-row">
-            <!-- CAS -->
-            <div class="param-block" id="casWrapper">
-                <button class="tab selected" id="tabCas" type="button">
-                    <div class="tab-label-row">
-                        <span class="main-label">CAS</span>
-                    </div>
-                    <input id="casInput" type="number" step="1" value="350" class="value-input">
-                    <div class="unit-label">kt</div>
-                </button>
-                <!-- סליידר מוסתר, נשאר ללוגיקה -->
-                <input id="casSlider" class="param-slider" type="range" min="150" max="700" step="10" value="350">
-                <div class="spin-buttons-row">
-                    <div class="spin-buttons" id="casSpin" data-target="casInput" data-step="10" data-min="150"
-                        data-max="700">
-                        <button type="button" class="spin-up">▲</button>
-                        <button type="button" class="spin-down">▼</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- MACH -->
-            <div class="param-block" id="machWrapper">
-                <button class="tab selected" id="tabMach" type="button">
-                    <div class="tab-label-row">
-                        <span class="main-label">MACH</span>
-                    </div>
-                    <input id="machInput" type="number" step="0.01" value="0.80" class="value-input">
-                    <div class="unit-label">M</div>
-                </button>
-                <!-- חוגה במקום סליידר -->
-                <canvas id="machDial" width="120" height="120"></canvas>
-                <!-- סליידר מוסתר למימוש פנימי -->
-                <input id="machSlider" class="param-slider" type="range" min="0.6" max="1.2" step="0.01" value="0.80">
-                <div class="spin-buttons-row">
-                    <div class="spin-buttons" id="machSpin" data-target="machInput" data-step="0.01" data-min="0.6"
-                        data-max="1.2">
-                        <button type="button" class="spin-up">▲</button>
-                        <button type="button" class="spin-down">▼</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ALT -->
-            <div class="param-block output-param" id="altWrapper">
-                <button class="tab" id="tabAlt" type="button">
-                    <div class="tab-label-row">
-                        <span class="main-label">ALT</span>
-                    </div>
-                    <input id="altInput" type="number" step="100" value="23000" class="value-input" disabled>
-                    <div class="unit-label">ft</div>
-                </button>
-                <input id="altSlider" class="param-slider" type="range" min="0" max="40000" step="1000" value="23000">
-                <div class="spin-buttons-row">
-                    <div class="spin-buttons" id="altSpin" data-target="altInput" data-step="1000" data-min="0"
-                        data-max="40000">
-                        <button type="button" class="spin-up">▲</button>
-                        <button type="button" class="spin-down">▼</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="form-rows">
-            <div id="isaControl">
-                ISA
-                <span id="isaValue">+0°C</span>
-                <input type="range" id="isaSlider" min="-20" max="20" value="0">
-            </div>
-
-            <div class="form-row action-row">
-                <div class="action-wrapper">
-                    <button id="solveButton" class="primary-btn" disabled>
-                        <span class="icon">✈️</span>
-                        <span>ברשותך, ממריא בלי אישור</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <div id="calcResult" class="result-box">
-            Result will appear here…
-        </div>
+      </div>
+      <div class="solve-label" dir="rtl">
+        בחר שני פרמטרים לקלט – השלישי יחושב עבורך, פרינצי:
+      </div>
     </div>
 
-    <div id="container">
-        <canvas id="machCanvas"></canvas>
+    <div class="tabs-row">
+      <div class="param-block" id="casWrapper">
+        <button class="tab selected" id="tabCas" type="button">
+          <div class="tab-label-row">
+            <span class="main-label">CAS</span>
+          </div>
+          <input id="casInput" type="number" step="1" value="350" class="value-input">
+          <div class="unit-label">kt</div>
+        </button>
+        <input id="casSlider" class="param-slider" type="range" min="150" max="700" step="10" value="350">
+        <div class="spin-buttons-row">
+          <div class="spin-buttons" id="casSpin" data-target="casInput" data-step="10" data-min="150" data-max="700">
+            <button type="button" class="spin-up">▲</button>
+            <button type="button" class="spin-down">▼</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="param-block" id="machWrapper">
+        <button class="tab selected" id="tabMach" type="button">
+          <div class="tab-label-row">
+            <span class="main-label">MACH</span>
+          </div>
+          <input id="machInput" type="number" step="0.01" value="0.80" class="value-input">
+          <div class="unit-label">M</div>
+        </button>
+        <canvas id="machDial" width="120" height="120"></canvas>
+        <input id="machSlider" class="param-slider" type="range" min="0.6" max="1.2" step="0.01" value="0.80">
+        <div class="spin-buttons-row">
+          <div class="spin-buttons" id="machSpin" data-target="machInput" data-step="0.01" data-min="0.6" data-max="1.2">
+            <button type="button" class="spin-up">▲</button>
+            <button type="button" class="spin-down">▼</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="param-block output-param" id="altWrapper">
+        <button class="tab" id="tabAlt" type="button">
+          <div class="tab-label-row">
+            <span class="main-label">ALT</span>
+          </div>
+          <input id="altInput" type="number" step="100" value="23000" class="value-input" disabled>
+          <div class="unit-label">ft</div>
+        </button>
+        <input id="altSlider" class="param-slider" type="range" min="0" max="40000" step="1000" value="23000">
+        <div class="spin-buttons-row">
+          <div class="spin-buttons" id="altSpin" data-target="altInput" data-step="1000" data-min="0" data-max="40000">
+            <button type="button" class="spin-up">▲</button>
+            <button type="button" class="spin-down">▼</button>
+          </div>
+        </div>
+      </div>
     </div>
-    <div id="info">Move mouse or finger near a Mach line…</div>
-    <div id="legend">
-        Range: CAS 150–700 kt, Alt 0–40,000 ft. Pinch to zoom & pan, tap Mach lines to lock & drag point.
+
+    <div class="form-rows">
+      <div id="isaControl">
+        ISA
+        <span id="isaValue">+0°C</span>
+        <input type="range" id="isaSlider" min="-20" max="20" value="0">
+      </div>
+
+      <div class="form-row action-row">
+        <div class="action-wrapper">
+          <button id="solveButton" class="primary-btn" disabled>
+            <span class="icon">✈️</span>
+            <span>ברשותך, ממריא בלי אישור</span>
+          </button>
+        </div>
+      </div>
     </div>
 
-    <script>
-        // ==== Constants ====
-        const T0 = 288.15;
-        const P0 = 101325.0;
-        const R = 287.05287;
-        const G = 9.80665;
-        const L = 0.0065;
-        const GAMMA = 1.4;
-        const FT_PER_M = 3.28084;
+    <div id="calcResult" class="result-box">
+      Result will appear here…
+    </div>
+  </div>
 
-        const CAS_MIN = 150;
-        const CAS_MAX = 700;
-        const ALT_MIN = 0;
-        const ALT_MAX = 40000;
+  <div id="container">
+    <canvas id="machCanvas"></canvas>
+  </div>
+  <div id="info">Move mouse or finger near a Mach line…</div>
+  <div id="legend">
+    Range: CAS 150–700 kt, Alt 0–40,000 ft. Pinch to zoom & pan, tap Mach lines to lock & drag point.
+  </div>
 
-        const machValues = [];
-        for (let m = 0.6; m <= 1.2001; m += 0.1) {
-            machValues.push(parseFloat(m.toFixed(1)));
+  <script>
+    const T0 = 288.15;
+    const P0 = 101325.0;
+    const R = 287.05287;
+    const G = 9.80665;
+    const L = 0.0065;
+    const GAMMA = 1.4;
+    const FT_PER_M = 3.28084;
+
+    const CAS_MIN = 150;
+    const CAS_MAX = 700;
+    const ALT_MIN = 0;
+    const ALT_MAX = 40000;
+
+    const machValues = [];
+    for (let m = 0.6; m <= 1.2001; m += 0.1) {
+      machValues.push(parseFloat(m.toFixed(1)));
+    }
+    const altStepFt = 2000;
+
+    const canvas = document.getElementById('machCanvas');
+    const ctx = canvas.getContext('2d');
+    const infoDiv = document.getElementById('info');
+    const isaSlider = document.getElementById('isaSlider');
+    const isaValueSpan = document.getElementById('isaValue');
+    const solveButton = document.getElementById('solveButton');
+    const resultDiv = document.getElementById('calcResult');
+
+    const marginLeft = 70;
+    const marginRight = 25;
+    const marginTop = 40;
+    const marginBottom = 50;
+
+    let machLinesData = [];
+    let lockedPoint = null;
+    let currentPoint = null;
+    let highlightCasTick = null;
+    let highlightAltTick = null;
+    let isaDeviationC = 0;
+
+    let viewCasMin = 300;
+    let viewCasMax = 600;
+    let viewAltMin = 10000;
+    let viewAltMax = 30000;
+
+    let casMinorStep = 50, casLabelStep = 100;
+    let altMinorStep = 1000, altLabelStep = 5000;
+
+    let pinchOrientation = null;
+    let pinchStartDist = 0;
+    let pinchStartViewCasMin = viewCasMin;
+    let pinchStartViewCasMax = viewCasMax;
+    let pinchStartViewAltMin = viewAltMin;
+    let pinchStartViewAltMax = viewAltMax;
+    let pinchStartMidCas = null;
+    let pinchStartMidAlt = null;
+    let lastTouchPos = null;
+    let dragLockedTouch = false;
+
+    let machDialCanvas = null;
+    let machDialCtx = null;
+    let machDialDragging = false;
+
+    let calcMode = "solveAlt";
+    let inputParams = ['CAS', 'MACH'];
+
+    function setSolveEnabled(on) { solveButton.disabled = !on; }
+    function markChanged() { setSolveEnabled(true); }
+
+    function isaAtAltitude(hMeters) {
+      let T, p;
+      if (hMeters <= 11000.0) {
+        T = T0 - L * hMeters;
+        p = P0 * Math.pow(T / T0, G / (R * L));
+      } else {
+        const T11 = T0 - L * 11000.0;
+        const p11 = P0 * Math.pow(T11 / T0, G / (R * L));
+        T = T11;
+        p = p11 * Math.exp(-G * (hMeters - 11000.0) / (R * T));
+      }
+      const rho = p / (R * T);
+      const a = Math.sqrt(GAMMA * R * T);
+      return { T, p, rho, a };
+    }
+
+    function casFromMachAndAlt(M, hMeters) {
+      const atm = isaAtAltitude(hMeters);
+      const p = atm.p;
+      const qc = p * (Math.pow(1 + 0.2 * M * M, 3.5) - 1.0);
+      const a0 = Math.sqrt(GAMMA * R * T0);
+      const ptOverP0 = qc / P0 + 1.0;
+      const Vc2 = 5 * a0 * a0 * (Math.pow(ptOverP0, 2.0 / 7.0) - 1.0);
+      const Vc2pos = Math.max(Vc2, 0);
+      const Vc = Math.sqrt(Vc2pos);
+      return Vc / 0.514444;
+    }
+
+    function tasFromPoint(pt) {
+      if (!pt) return null;
+      const altM = pt.altFt / FT_PER_M;
+      const atmISA = isaAtAltitude(altM);
+      const T_actual = atmISA.T + isaDeviationC;
+      const a_actual = Math.sqrt(GAMMA * R * T_actual);
+      const tas_ms = pt.M * a_actual;
+      return tas_ms / 0.514444;
+    }
+
+    function findAltitudeForCasAndMach(M, casTarget) {
+      const hMin = ALT_MIN / FT_PER_M;
+      const hMax = ALT_MAX / FT_PER_M;
+      function f(h) { return casFromMachAndAlt(M, h) - casTarget; }
+
+      let fMin = f(hMin), fMax = f(hMax);
+      if (!isFinite(fMin) || !isFinite(fMax) || fMin * fMax > 0) return null;
+
+      let lo = hMin, hi = hMax;
+      for (let i = 0; i < 50; i++) {
+        const mid = 0.5 * (lo + hi);
+        const fMid = f(mid);
+        if (fMin * fMid <= 0) { hi = mid; fMax = fMid; }
+        else { lo = mid; fMin = fMid; }
+      }
+      return 0.5 * (lo + hi);
+    }
+
+    function solveMachGivenCasAlt(casTarget, altFt) {
+      const altM = altFt / FT_PER_M;
+      function f(M) { return casFromMachAndAlt(M, altM) - casTarget; }
+
+      let lo = 0.1, hi = 2.0;
+      let fLo = f(lo), fHi = f(hi);
+      if (!isFinite(fLo) || !isFinite(fHi) || fLo * fHi > 0) return null;
+
+      for (let i = 0; i < 60; i++) {
+        const mid = 0.5 * (lo + hi);
+        const fMid = f(mid);
+        if (fLo * fMid <= 0) { hi = mid; fHi = fMid; }
+        else { lo = mid; fLo = fMid; }
+      }
+      return 0.5 * (lo + hi);
+    }
+
+    function clampMachValue(val) {
+      return Math.min(1.2, Math.max(0.6, val));
+    }
+
+    function getMachValue() {
+      let M = parseFloat(document.getElementById('machInput').value);
+      if (isNaN(M)) M = 0.8;
+      return clampMachValue(M);
+    }
+
+    function drawMachDial() {
+      if (!machDialCanvas || !machDialCtx) return;
+      const ctxD = machDialCtx;
+      const w = machDialCanvas.width;
+      const h = machDialCanvas.height;
+      const cx = w / 2;
+      const cy = h / 2;
+      const radius = Math.min(w, h) / 2 - 6;
+
+      ctxD.clearRect(0, 0, w, h);
+      ctxD.fillStyle = "#020617";
+      ctxD.fillRect(0, 0, w, h);
+
+      ctxD.beginPath();
+      ctxD.arc(cx, cy, radius, 0, 2 * Math.PI);
+      ctxD.fillStyle = "#0b1120";
+      ctxD.fill();
+      ctxD.strokeStyle = "#4b5563";
+      ctxD.lineWidth = 2;
+      ctxD.stroke();
+
+      ctxD.save();
+      ctxD.translate(cx, cy);
+      const minM = 0.6, maxM = 1.2;
+      const sweepDeg = 270;
+      for (let m = minM; m <= maxM + 1e-6; m += 0.1) {
+        const frac = (m - minM) / (maxM - minM);
+        const deg = -135 + frac * sweepDeg;
+        const rad = deg * Math.PI / 180;
+        const rOuter = radius - 4;
+        const rInner = radius - 10;
+        const x1 = rInner * Math.cos(rad);
+        const y1 = rInner * Math.sin(rad);
+        const x2 = rOuter * Math.cos(rad);
+        const y2 = rOuter * Math.sin(rad);
+        ctxD.beginPath();
+        ctxD.moveTo(x1, y1);
+        ctxD.lineTo(x2, y2);
+        ctxD.strokeStyle = "#6b7280";
+        ctxD.lineWidth = 1.2;
+        ctxD.stroke();
+      }
+
+      const M = getMachValue();
+      const fracM = (M - minM) / (maxM - minM);
+      const angleDeg = -135 + fracM * sweepDeg;
+      const angleRad = angleDeg * Math.PI / 180;
+      const rNeedle = radius - 14;
+      const nx = rNeedle * Math.cos(angleRad);
+      const ny = rNeedle * Math.sin(angleRad);
+
+      ctxD.beginPath();
+      ctxD.moveTo(0, 0);
+      ctxD.lineTo(nx, ny);
+      ctxD.strokeStyle = "#38bdf8";
+      ctxD.lineWidth = 2;
+      ctxD.stroke();
+
+      ctxD.beginPath();
+      ctxD.arc(0, 0, 4, 0, 2 * Math.PI);
+      ctxD.fillStyle = "#38bdf8";
+      ctxD.fill();
+
+      ctxD.fillStyle = "#e5e7eb";
+      ctxD.font = "11px system-ui";
+      ctxD.textAlign = "center";
+      ctxD.textBaseline = "middle";
+      ctxD.fillText(M.toFixed(2) + " M", 0, radius * -0.4);
+
+      ctxD.restore();
+    }
+
+    function machDialSetByPointer(clientX, clientY) {
+      if (!machDialCanvas) return;
+      const rect = machDialCanvas.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = clientX - cx;
+      const dy = clientY - cy;
+      let angle = Math.atan2(dy, dx);
+      let deg = angle * 180 / Math.PI;
+      if (deg < -135) deg = -135;
+      if (deg > 135) deg = 135;
+      const frac = (deg + 135) / 270;
+      let M = 0.6 + frac * (1.2 - 0.6);
+      M = Math.round(M * 100) / 100;
+      const machInput = document.getElementById('machInput');
+      const machSlider = document.getElementById('machSlider');
+      machInput.value = M.toFixed(2);
+      if (machSlider) machSlider.value = M;
+      drawMachDial();
+      markChanged();
+    }
+
+    function xFromCas(cas) {
+      const frac = (cas - viewCasMin) / (viewCasMax - viewCasMin);
+      return marginLeft + frac * (canvas.width - marginLeft - marginRight);
+    }
+
+    function yFromAlt(altFt) {
+      const frac = (altFt - viewAltMin) / (viewAltMax - viewAltMin);
+      return canvas.height - marginBottom - frac * (canvas.height - marginTop - marginBottom);
+    }
+
+    function casFromX(x) {
+      const frac = (x - marginLeft) / (canvas.width - marginLeft - marginRight);
+      return viewCasMin + frac * (viewCasMax - viewCasMin);
+    }
+
+    function altFromY(y) {
+      const frac = (canvas.height - marginBottom - y) / (canvas.height - marginTop - marginBottom);
+      return viewAltMin + frac * (viewAltMax - viewAltMin);
+    }
+
+    function buildMachLineData(M) {
+      const pts = [];
+      for (let altFt = ALT_MIN; altFt <= ALT_MAX + 1; altFt += altStepFt) {
+        const altM = altFt / FT_PER_M;
+        const cas = casFromMachAndAlt(M, altM);
+        pts.push({ cas, altFt });
+      }
+      return { M, pts };
+    }
+
+    function addMachLineIfMissing(M) {
+      const mNum = Number(M);
+      if (!isFinite(mNum)) return;
+      const eps = 1e-6;
+      for (const l of machLinesData) if (Math.abs(l.M - mNum) < eps) return;
+      machLinesData.push(buildMachLineData(mNum));
+    }
+
+    function buildData() {
+      machLinesData = [];
+      for (const M of machValues) machLinesData.push(buildMachLineData(M));
+    }
+
+    function setResultBoxFromValues(M, cas, altFt) {
+      if (!isFinite(M) || !isFinite(cas) || !isFinite(altFt)) return;
+      const tasVal = tasFromPoint({ M, altFt });
+      const tasStr = tasVal ? tasVal.toFixed(1) : "N/A";
+      const dIsaStr = (isaDeviationC >= 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
+      resultDiv.innerHTML =
+        `Mach: <b>${M.toFixed(3)}</b> | ` +
+        `CAS: <b>${cas.toFixed(1)} kt</b> | ` +
+        `Alt: <b>${altFt.toFixed(0)} ft</b> | ` +
+        `TAS: <b>${tasStr} kt</b> | ` +
+        `ISA: <b>${dIsaStr}</b>`;
+    }
+
+    function drawAxesAndGrid() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#020617";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const plotX = marginLeft;
+      const plotY = marginTop;
+      const plotW = canvas.width - marginLeft - marginRight;
+      const plotH = canvas.height - marginTop - marginBottom;
+
+      const casSpan = viewCasMax - viewCasMin;
+      if (casSpan > 350) { casMinorStep = 50; casLabelStep = 100; }
+      else if (casSpan > 180) { casMinorStep = 25; casLabelStep = 50; }
+      else { casMinorStep = 10; casLabelStep = 20; }
+
+      const altSpan = viewAltMax - viewAltMin;
+      if (altSpan <= 5000) { altMinorStep = 250; altLabelStep = 1000; }
+      else if (altSpan <= 10000) { altMinorStep = 500; altLabelStep = 2000; }
+      else { altMinorStep = 1000; altLabelStep = 5000; }
+
+      ctx.strokeStyle = "#1f2937";
+      ctx.lineWidth = 0.9;
+      ctx.setLineDash([2, 4]);
+      ctx.beginPath();
+      for (let cas = CAS_MIN; cas <= CAS_MAX; cas += casLabelStep) {
+        const x = xFromCas(cas);
+        if (x < marginLeft || x > canvas.width - marginRight) continue;
+        ctx.moveTo(x, yFromAlt(viewAltMin));
+        ctx.lineTo(x, yFromAlt(viewAltMax));
+      }
+      ctx.stroke();
+
+      ctx.beginPath();
+      for (let alt = ALT_MIN; alt <= ALT_MAX; alt += altLabelStep) {
+        const y = yFromAlt(alt);
+        if (y < marginTop || y > canvas.height - marginBottom) continue;
+        ctx.moveTo(xFromCas(viewCasMin), y);
+        ctx.lineTo(xFromCas(viewCasMax), y);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.strokeStyle = "#9ca3af";
+      ctx.lineWidth = 1.2;
+      const xAxisY = yFromAlt(viewAltMin);
+      ctx.beginPath();
+      ctx.moveTo(xFromCas(viewCasMin), xAxisY);
+      ctx.lineTo(xFromCas(viewCasMax), xAxisY);
+      ctx.stroke();
+
+      const yAxisX = xFromCas(viewCasMin);
+      ctx.beginPath();
+      ctx.moveTo(yAxisX, yFromAlt(viewAltMin));
+      ctx.lineTo(yAxisX, yFromAlt(viewAltMax));
+      ctx.stroke();
+
+      ctx.strokeStyle = "#e5e7eb";
+      ctx.lineWidth = 1.2;
+      ctx.setLineDash([]);
+      ctx.strokeRect(plotX, plotY, plotW, plotH);
+
+      ctx.strokeStyle = "#4b5563";
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      for (let cas = CAS_MIN; cas <= CAS_MAX; cas += casMinorStep) {
+        const x = xFromCas(cas);
+        if (x < marginLeft || x > canvas.width - marginRight) continue;
+        const tickLen = (cas % casLabelStep === 0) ? 6 : 3;
+        ctx.moveTo(x, xAxisY);
+        ctx.lineTo(x, xAxisY + tickLen);
+      }
+      ctx.stroke();
+
+      ctx.font = "11px system-ui";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      for (let cas = CAS_MIN; cas <= CAS_MAX; cas += casLabelStep) {
+        const x = xFromCas(cas);
+        if (x < marginLeft || x > canvas.width - marginRight) continue;
+        ctx.strokeStyle = "#9ca3af";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, xAxisY);
+        ctx.lineTo(x, xAxisY + 6);
+        ctx.stroke();
+        if (highlightCasTick !== null && cas === highlightCasTick) {
+          ctx.fillStyle = "#38bdf8";
+          ctx.font = "bold 11px system-ui";
+        } else {
+          ctx.fillStyle = "#e5e7eb";
+          ctx.font = "11px system-ui";
         }
-        const altStepFt = 2000;
+        ctx.fillText(cas.toString(), x, xAxisY + 8);
+      }
 
-        const canvas = document.getElementById('machCanvas');
-        const ctx = canvas.getContext('2d');
-        const infoDiv = document.getElementById('info');
-        const isaSlider = document.getElementById('isaSlider');
-        const isaValueSpan = document.getElementById('isaValue');
-        const solveButton = document.getElementById('solveButton');
-        const resultDiv = document.getElementById('calcResult');
+      ctx.strokeStyle = "#4b5563";
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      for (let alt = ALT_MIN; alt <= ALT_MAX; alt += altMinorStep) {
+        const y = yFromAlt(alt);
+        if (y < marginTop || y > canvas.height - marginBottom) continue;
+        const tickLen = (alt % altLabelStep === 0) ? 6 : 3;
+        ctx.moveTo(yAxisX - tickLen, y);
+        ctx.lineTo(yAxisX, y);
+      }
+      ctx.stroke();
 
-        const marginLeft = 70;
-        const marginRight = 25;
-        const marginTop = 40;
-        const marginBottom = 50;
-
-        let machLinesData = [];
-        let lockedPoint = null;
-        let currentPoint = null;
-        let highlightCasTick = null;
-        let highlightAltTick = null;
-        let isaDeviationC = 0;
-
-        // view window (default)
-        let viewCasMin = 300;
-        let viewCasMax = 600;
-        let viewAltMin = 10000;
-        let viewAltMax = 30000;
-
-        // dynamic tick steps
-        let casMinorStep = 50, casLabelStep = 100;
-        let altMinorStep = 1000, altLabelStep = 5000;
-
-        // pinch / pan
-        let pinchOrientation = null;
-        let pinchStartDist = 0;
-        let pinchStartViewCasMin = viewCasMin;
-        let pinchStartViewCasMax = viewCasMax;
-        let pinchStartViewAltMin = viewAltMin;
-        let pinchStartViewAltMax = viewAltMax;
-        let pinchStartMidCas = null;
-        let pinchStartMidAlt = null;
-        let lastTouchPos = null;
-        let dragLockedTouch = false;
-
-        // Mach dial
-        let machDialCanvas = null;
-        let machDialCtx = null;
-        let machDialDragging = false;
-
-        // solve mode – מי מחושב (output)
-        // solveCas => CAS מחושב; קלט: MACH+ALT
-        // solveMach => MACH מחושב; קלט: CAS+ALT
-        // solveAlt => ALT מחושב; קלט: CAS+MACH
-        let calcMode = "solveAlt";
-
-        // רשימת שני הפרמטרים שנבחרו כקלט, לפי סדר הוותק
-        // הערכים: 'CAS', 'MACH', 'ALT'
-        let inputParams = ['CAS', 'MACH']; // ברירת מחדל – ALT תוצאה
-
-        function setSolveEnabled(on) { solveButton.disabled = !on; }
-        function markChanged() { setSolveEnabled(true); }
-
-        // ===== Atmosphere / conversions =====
-        function isaAtAltitude(hMeters) {
-            let T, p;
-            if (hMeters <= 11000.0) {
-                T = T0 - L * hMeters;
-                p = P0 * Math.pow(T / T0, G / (R * L));
-            } else {
-                const T11 = T0 - L * 11000.0;
-                const p11 = P0 * Math.pow(T11 / T0, G / (R * L));
-                T = T11;
-                p = p11 * Math.exp(-G * (hMeters - 11000.0) / (R * T));
-            }
-            const rho = p / (R * T);
-            const a = Math.sqrt(GAMMA * R * T);
-            return { T, p, rho, a };
+      ctx.textAlign = "right";
+      ctx.textBaseline = "middle";
+      for (let alt = ALT_MIN; alt <= ALT_MAX; alt += altLabelStep) {
+        const y = yFromAlt(alt);
+        if (y < marginTop || y > canvas.height - marginBottom) continue;
+        ctx.strokeStyle = "#9ca3af";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(yAxisX - 6, y);
+        ctx.lineTo(yAxisX, y);
+        ctx.stroke();
+        if (highlightAltTick !== null && alt === highlightAltTick) {
+          ctx.fillStyle = "#38bdf8";
+          ctx.font = "bold 11px system-ui";
+        } else {
+          ctx.fillStyle = "#e5e7eb";
+          ctx.font = "11px system-ui";
         }
+        ctx.fillText(alt.toString(), yAxisX - 8, y);
+      }
 
-        function casFromMachAndAlt(M, hMeters) {
-            const atm = isaAtAltitude(hMeters);
-            const p = atm.p;
-            const qc = p * (Math.pow(1 + 0.2 * M * M, 3.5) - 1.0);
-            const a0 = Math.sqrt(GAMMA * R * T0);
-            const ptOverP0 = qc / P0 + 1.0;
-            const Vc2 = 5 * a0 * a0 * (Math.pow(ptOverP0, 2.0 / 7.0) - 1.0);
-            const Vc2pos = Math.max(Vc2, 0);
-            const Vc = Math.sqrt(Vc2pos);
-            return Vc / 0.514444;
+      ctx.fillStyle = "#e5e7eb";
+      ctx.font = "13px system-ui";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      ctx.fillText("CAS [kt]", (xFromCas(viewCasMin) + xFromCas(viewCasMax)) / 2, canvas.height - marginBottom + 20);
+
+      ctx.save();
+      ctx.translate(20, (yFromAlt(viewAltMin) + yFromAlt(viewAltMax)) / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.textAlign = "center";
+      ctx.textBaseline = "bottom";
+      ctx.fillText("Altitude [ft]", 0, 0);
+      ctx.restore();
+
+      ctx.font = "16px system-ui";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      ctx.fillText("Mach–CAS–Altitude Chart", canvas.width / 2, 8);
+    }
+
+    function drawMachLines(highlightMach) {
+      const colors = ["#94a3b8", "#a5b4fc", "#fbbf24", "#6ee7b7", "#f9a8d4", "#7dd3fc", "#c4b5fd"];
+      for (let i = 0; i < machLinesData.length; i++) {
+        const line = machLinesData[i];
+        const pts = line.pts;
+        const color = colors[i % colors.length];
+        ctx.beginPath();
+        let started = false;
+        for (const p of pts) {
+          const cas = p.cas;
+          const altFt = p.altFt;
+          if (cas < viewCasMin || cas > viewCasMax) continue;
+          if (altFt < viewAltMin || altFt > viewAltMax) continue;
+          const x = xFromCas(cas);
+          const y = yFromAlt(altFt);
+          if (!started) { ctx.moveTo(x, y); started = true; }
+          else ctx.lineTo(x, y);
         }
-
-        function tasFromPoint(pt) {
-            if (!pt) return null;
-            const altM = pt.altFt / FT_PER_M;
-            const atmISA = isaAtAltitude(altM);
-            const T_actual = atmISA.T + isaDeviationC;
-            const a_actual = Math.sqrt(GAMMA * R * T_actual);
-            const tas_ms = pt.M * a_actual;
-            return tas_ms / 0.514444;
+        if (!started) continue;
+        if (highlightMach != null && Math.abs(line.M - highlightMach) < 1e-6) {
+          ctx.strokeStyle = "#ffffff";
+          ctx.lineWidth = 2;
+        } else {
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 1.4;
         }
+        ctx.stroke();
+      }
 
-        function findAltitudeForCasAndMach(M, casTarget) {
-            const hMin = ALT_MIN / FT_PER_M;
-            const hMax = ALT_MAX / FT_PER_M;
-            function f(h) { return casFromMachAndAlt(M, h) - casTarget; }
+      const labelAltFt = (viewAltMin + viewAltMax) / 2;
+      ctx.font = "11px system-ui";
+      ctx.fillStyle = "#bfdbfe";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      for (const line of machLinesData) {
+        if (labelAltFt < ALT_MIN || labelAltFt > ALT_MAX) continue;
+        const casLabel = casFromMachAndAlt(line.M, labelAltFt / FT_PER_M);
+        if (casLabel < viewCasMin || casLabel > viewCasMax) continue;
+        const xLabel = xFromCas(casLabel);
+        const yLabel = yFromAlt(labelAltFt) - 8;
+        if (xLabel < marginLeft || xLabel > canvas.width - marginRight) continue;
+        if (yLabel < marginTop || yLabel > canvas.height - marginBottom) continue;
+        ctx.save();
+        ctx.translate(xLabel, yLabel);
+        ctx.rotate(-Math.PI / 4);
+        ctx.fillText(line.M.toFixed(2) + "M", 0, 0);
+        ctx.restore();
+      }
+    }
 
-            let fMin = f(hMin), fMax = f(hMax);
-            if (!isFinite(fMin) || !isFinite(fMax) || fMin * fMax > 0) return null;
+    function redraw(point) {
+      currentPoint = point || null;
+      drawAxesAndGrid();
+      drawMachLines(point ? point.M : (lockedPoint ? lockedPoint.M : null));
 
-            let lo = hMin, hi = hMax;
-            for (let i = 0; i < 50; i++) {
-                const mid = 0.5 * (lo + hi);
-                const fMid = f(mid);
-                if (fMin * fMid <= 0) { hi = mid; fMax = fMid; }
-                else { lo = mid; fMin = fMid; }
-            }
-            return 0.5 * (lo + hi);
+      const p = point || lockedPoint;
+      if (p) {
+        const x = xFromCas(p.cas);
+        const y = yFromAlt(p.altFt);
+        ctx.strokeStyle = "#6b7280";
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(x, yFromAlt(viewAltMin));
+        ctx.lineTo(x, yFromAlt(viewAltMax));
+        ctx.moveTo(xFromCas(viewCasMin), y);
+        ctx.lineTo(xFromCas(viewCasMax), y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = lockedPoint ? "#f97373" : "#facc15";
+        ctx.beginPath();
+        ctx.arc(x, y, 4.5, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+    }
+
+    function findNearestOnLines(mx, my) {
+      const thresholdPx = 12;
+      let bestLine = null;
+      let bestDist = Infinity;
+      for (const line of machLinesData) {
+        for (const pt of line.pts) {
+          const cas = pt.cas;
+          const altFt = pt.altFt;
+          if (cas < viewCasMin || cas > viewCasMax) continue;
+          if (altFt < viewAltMin || altFt > viewAltMax) continue;
+          const px = xFromCas(cas);
+          const py = yFromAlt(altFt);
+          const dx = px - mx;
+          const dy = py - my;
+          const d2 = dx * dx + dy * dy;
+          if (d2 < bestDist) { bestDist = d2; bestLine = line; }
         }
+      }
+      if (!bestLine || Math.sqrt(bestDist) > thresholdPx) return null;
 
-        function solveMachGivenCasAlt(casTarget, altFt) {
-            const altM = altFt / FT_PER_M;
-            function f(M) { return casFromMachAndAlt(M, altM) - casTarget; }
+      let rawCas = casFromX(mx);
+      let snappedCas = Math.round(rawCas / 10) * 10;
+      snappedCas = Math.max(CAS_MIN, Math.min(CAS_MAX, snappedCas));
+      const hM = findAltitudeForCasAndMach(bestLine.M, snappedCas);
+      if (hM === null) return null;
+      const altFt = hM * FT_PER_M;
+      if (altFt < viewAltMin || altFt > viewAltMax) return null;
+      return { M: bestLine.M, cas: snappedCas, altFt };
+    }
 
-            let lo = 0.1, hi = 2.0;
-            let fLo = f(lo), fHi = f(hi);
-            if (!isFinite(fLo) || !isFinite(fHi) || fLo * fHi > 0) return null;
+    function updateLockedPointFromY(my) {
+      if (!lockedPoint) return;
+      let alt = altFromY(my);
+      alt = Math.max(ALT_MIN, Math.min(ALT_MAX, alt));
+      if (calcMode === "solveCas") alt = Math.round(alt / 500) * 500;
+      const altM = alt / FT_PER_M;
+      const cas = casFromMachAndAlt(lockedPoint.M, altM);
+      lockedPoint = { M: lockedPoint.M, cas, altFt: alt };
+      highlightCasTick = Math.round(lockedPoint.cas / casLabelStep) * casLabelStep;
+      highlightAltTick = Math.round(lockedPoint.altFt / altLabelStep) * altLabelStep;
+      redraw(lockedPoint);
+      setResultBoxFromValues(lockedPoint.M, lockedPoint.cas, lockedPoint.altFt);
+      const tas = tasFromPoint(lockedPoint);
+      const tasStr = tas ? tas.toFixed(1) : "N/A";
+      const deltaStr = (isaDeviationC >= 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
+      infoDiv.textContent =
+        `LOCKED → Mach ${lockedPoint.M.toFixed(2)} | CAS ${lockedPoint.cas.toFixed(1)} kt | Alt ${lockedPoint.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
+    }
 
-            for (let i = 0; i < 60; i++) {
-                const mid = 0.5 * (lo + hi);
-                const fMid = f(mid);
-                if (fLo * fMid <= 0) { hi = mid; fHi = fMid; }
-                else { lo = mid; fLo = fMid; }
-            }
-            return 0.5 * (lo + hi);
+    function handlePointerMove(mx, my) {
+      if (lockedPoint) {
+        highlightCasTick = Math.round(lockedPoint.cas / casLabelStep) * casLabelStep;
+        highlightAltTick = Math.round(lockedPoint.altFt / altLabelStep) * altLabelStep;
+        redraw(lockedPoint);
+        setResultBoxFromValues(lockedPoint.M, lockedPoint.cas, lockedPoint.altFt);
+        const tas = tasFromPoint(lockedPoint);
+        const tasStr = tas ? tas.toFixed(1) : "N/A";
+        const deltaStr = (isaDeviationC >= 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
+        infoDiv.textContent =
+          `LOCKED → Mach ${lockedPoint.M.toFixed(2)} | CAS ${lockedPoint.cas.toFixed(1)} kt | Alt ${lockedPoint.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
+        return;
+      }
+      if (mx < marginLeft || mx > canvas.width - marginRight ||
+          my < marginTop || my > canvas.height - marginBottom) {
+        highlightCasTick = null;
+        highlightAltTick = null;
+        redraw(null);
+        infoDiv.textContent = "Move mouse or finger near a Mach line…";
+        return;
+      }
+      const nearest = findNearestOnLines(mx, my);
+      if (nearest) {
+        highlightCasTick = Math.round(nearest.cas / casLabelStep) * casLabelStep;
+        highlightAltTick = Math.round(nearest.altFt / altLabelStep) * altLabelStep;
+        redraw(nearest);
+        setResultBoxFromValues(nearest.M, nearest.cas, nearest.altFt);
+        const tas = tasFromPoint(nearest);
+        const tasStr = tas ? tas.toFixed(1) : "N/A";
+        const deltaStr = (isaDeviationC >= 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
+        infoDiv.textContent =
+          `Mach ${nearest.M.toFixed(2)} | CAS ${nearest.cas.toFixed(1)} kt | Alt ${nearest.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
+      } else {
+        highlightCasTick = null;
+        highlightAltTick = null;
+        redraw(null);
+        const casApprox = casFromX(mx).toFixed(0);
+        const altApprox = altFromY(my).toFixed(0);
+        infoDiv.textContent =
+          `Not on a Mach line. Approx: CAS ≈ ${casApprox} kt, Alt ≈ ${altApprox} ft`;
+      }
+    }
+
+    function handlePointerClick(mx, my) {
+      if (mx < marginLeft || mx > canvas.width - marginRight ||
+          my < marginTop || my > canvas.height - marginBottom) return;
+      const nearest = findNearestOnLines(mx, my);
+      if (nearest) {
+        lockedPoint = nearest;
+        highlightCasTick = Math.round(lockedPoint.cas / casLabelStep) * casLabelStep;
+        highlightAltTick = Math.round(lockedPoint.altFt / altLabelStep) * altLabelStep;
+        redraw(lockedPoint);
+        setResultBoxFromValues(lockedPoint.M, lockedPoint.cas, lockedPoint.altFt);
+        const tas = tasFromPoint(lockedPoint);
+        const tasStr = tas ? tas.toFixed(1) : "N/A";
+        const deltaStr = (isaDeviationC >= 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
+        infoDiv.textContent =
+          `LOCKED → Mach ${lockedPoint.M.toFixed(2)} | CAS ${lockedPoint.cas.toFixed(1)} kt | Alt ${lockedPoint.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
+      }
+    }
+
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      handlePointerMove(e.clientX - rect.left, e.clientY - rect.top);
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+      if (lockedPoint) {
+        highlightCasTick = Math.round(lockedPoint.cas / casLabelStep) * casLabelStep;
+        highlightAltTick = Math.round(lockedPoint.altFt / altLabelStep) * altLabelStep;
+        redraw(lockedPoint);
+        setResultBoxFromValues(lockedPoint.M, lockedPoint.cas, lockedPoint.altFt);
+        const tas = tasFromPoint(lockedPoint);
+        const tasStr = tas ? tas.toFixed(1) : "N/A";
+        const deltaStr = (isaDeviationC >= 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
+        infoDiv.textContent =
+          `LOCKED → Mach ${lockedPoint.M.toFixed(2)} | CAS ${lockedPoint.cas.toFixed(1)} kt | Alt ${lockedPoint.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
+      } else {
+        highlightCasTick = null;
+        highlightAltTick = null;
+        redraw(null);
+        infoDiv.textContent = "Move mouse or finger near a Mach line…";
+      }
+    });
+
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const zoomFactor = e.deltaY < 0 ? 0.9 : 1.1;
+      const centerCas = casFromX(mx);
+      const width = viewCasMax - viewCasMin;
+      let newWidth = width * zoomFactor;
+      newWidth = Math.max(50, Math.min(CAS_MAX - CAS_MIN, newWidth));
+      let newMin = centerCas - newWidth / 2;
+      let newMax = centerCas + newWidth / 2;
+      if (newMin < CAS_MIN) { newMin = CAS_MIN; newMax = CAS_MIN + newWidth; }
+      if (newMax > CAS_MAX) { newMax = CAS_MAX; newMin = CAS_MAX - newWidth; }
+      viewCasMin = newMin;
+      viewCasMax = newMax;
+      redraw(currentPoint || lockedPoint || null);
+    }, { passive: false });
+
+    canvas.addEventListener('click', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      handlePointerClick(e.clientX - rect.left, e.clientY - rect.top);
+    });
+
+    canvas.addEventListener('touchstart', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      if (e.touches.length === 2) {
+        const t1 = e.touches[0], t2 = e.touches[1];
+        const x1 = t1.clientX - rect.left, y1 = t1.clientY - rect.top;
+        const x2 = t2.clientX - rect.left, y2 = t2.clientY - rect.top;
+        const dx = x2 - x1, dy = y2 - y1;
+        pinchOrientation = (Math.abs(dx) >= Math.abs(dy)) ? 'horizontal' : 'vertical';
+        pinchStartDist = pinchOrientation === 'horizontal' ? Math.abs(dx) : Math.abs(dy);
+        pinchStartViewCasMin = viewCasMin;
+        pinchStartViewCasMax = viewCasMax;
+        pinchStartViewAltMin = viewAltMin;
+        pinchStartViewAltMax = viewAltMax;
+        const midX = (x1 + x2) / 2;
+        const midY = (y1 + y2) / 2;
+        pinchStartMidCas = casFromX(midX);
+        pinchStartMidAlt = altFromY(midY);
+        return;
+      }
+      if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        const mx = touch.clientX - rect.left;
+        const my = touch.clientY - rect.top;
+        lastTouchPos = { x: mx, y: my };
+        if (lockedPoint) {
+          dragLockedTouch = true;
+          updateLockedPointFromY(my);
+        } else {
+          dragLockedTouch = false;
+          handlePointerMove(mx, my);
         }
+      }
+    }, { passive: true });
 
-        // ==== Mach dial helpers ====
-        function clampMachValue(val) {
-            return Math.min(1.2, Math.max(0.6, val));
+    canvas.addEventListener('touchmove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        const t1 = e.touches[0], t2 = e.touches[1];
+        let x1 = t1.clientX - rect.left, y1 = t1.clientY - rect.top;
+        let x2 = t2.clientX - rect.left, y2 = t2.clientY - rect.top;
+        const dx = x2 - x1, dy = y2 - y1;
+        let distAxis = (pinchOrientation === 'horizontal') ? Math.abs(dx) : Math.abs(dy);
+        if (distAxis <= 0 || pinchStartDist <= 0) return;
+        const factor = pinchStartDist / distAxis;
+        if (pinchOrientation === 'horizontal') {
+          let width0 = pinchStartViewCasMax - pinchStartViewCasMin;
+          let newWidth = width0 * factor;
+          newWidth = Math.max(50, Math.min(CAS_MAX - CAS_MIN, newWidth));
+          const center = (pinchStartViewCasMin + pinchStartViewCasMax) / 2;
+          let newMin = center - newWidth / 2;
+          let newMax = center + newWidth / 2;
+          if (newMin < CAS_MIN) { newMin = CAS_MIN; newMax = CAS_MIN + newWidth; }
+          if (newMax > CAS_MAX) { newMax = CAS_MAX; newMin = CAS_MAX - newWidth; }
+          viewCasMin = newMin;
+          viewCasMax = newMax;
+        } else {
+          let h0 = pinchStartViewAltMax - pinchStartViewAltMin;
+          let newH = h0 * factor;
+          newH = Math.max(2000, Math.min(ALT_MAX - ALT_MIN, newH));
+          const centerAlt = (pinchStartViewAltMin + pinchStartViewAltMax) / 2;
+          let newMinAlt = centerAlt - newH / 2;
+          let newMaxAlt = centerAlt + newH / 2;
+          if (newMinAlt < ALT_MIN) { newMinAlt = ALT_MIN; newMaxAlt = ALT_MIN + newH; }
+          if (newMaxAlt > ALT_MAX) { newMaxAlt = ALT_MAX; newMinAlt = ALT_MAX - newH; }
+          viewAltMin = newMinAlt;
+          viewAltMax = newMaxAlt;
         }
-
-        function getMachValue() {
-            let M = parseFloat(document.getElementById('machInput').value);
-            if (isNaN(M)) M = 0.8;
-            return clampMachValue(M);
+        const midX = (x1 + x2) / 2;
+        const midY = (y1 + y2) / 2;
+        const midCas = casFromX(midX);
+        const midAlt = altFromY(midY);
+        if (pinchStartMidCas != null && pinchStartMidAlt != null) {
+          const dCas = pinchStartMidCas - midCas;
+          const dAlt = pinchStartMidAlt - midAlt;
+          let spanCas = viewCasMax - viewCasMin;
+          viewCasMin += dCas;
+          viewCasMax += dCas;
+          if (viewCasMin < CAS_MIN) { viewCasMin = CAS_MIN; viewCasMax = CAS_MIN + spanCas; }
+          if (viewCasMax > CAS_MAX) { viewCasMax = CAS_MAX; viewCasMin = CAS_MAX - spanCas; }
+          let spanAlt = viewAltMax - viewAltMin;
+          viewAltMin += dAlt;
+          viewAltMax += dAlt;
+          if (viewAltMin < ALT_MIN) { viewAltMin = ALT_MIN; viewAltMax = ALT_MIN + spanAlt; }
+          if (viewAltMax > ALT_MAX) { viewAltMax = ALT_MAX; viewAltMin = ALT_MAX - spanAlt; }
         }
+        redraw(currentPoint || lockedPoint || null);
+        return;
+      }
+      if (e.touches.length === 1) {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const mx = touch.clientX - rect.left;
+        const my = touch.clientY - rect.top;
+        lastTouchPos = { x: mx, y: my };
+        if (dragLockedTouch && lockedPoint) updateLockedPointFromY(my);
+        else handlePointerMove(mx, my);
+      }
+    }, { passive: false });
 
-        function drawMachDial() {
-            if (!machDialCanvas || !machDialCtx) return;
-            const ctxD = machDialCtx;
-            const w = machDialCanvas.width;
-            const h = machDialCanvas.height;
-            const cx = w / 2;
-            const cy = h / 2;
-            const radius = Math.min(w, h) / 2 - 6;
-
-            ctxD.clearRect(0, 0, w, h);
-
-            // רקע
-            ctxD.fillStyle = "#020617";
-            ctxD.fillRect(0, 0, w, h);
-
-            // עיגול
-            ctxD.beginPath();
-            ctxD.arc(cx, cy, radius, 0, 2 * Math.PI);
-            ctxD.fillStyle = "#0b1120";
-            ctxD.fill();
-            ctxD.strokeStyle = "#4b5563";
-            ctxD.lineWidth = 2;
-            ctxD.stroke();
-
-            // טיקים (0.6–1.2 כל 0.1)
-            ctxD.save();
-            ctxD.translate(cx, cy);
-            const minM = 0.6, maxM = 1.2;
-            const sweepDeg = 270; // -135 .. +135
-            for (let m = minM; m <= maxM + 1e-6; m += 0.1) {
-                const frac = (m - minM) / (maxM - minM);
-                const deg = -135 + frac * sweepDeg;
-                const rad = deg * Math.PI / 180;
-                const rOuter = radius - 4;
-                const rInner = radius - 10;
-                const x1 = rInner * Math.cos(rad);
-                const y1 = rInner * Math.sin(rad);
-                const x2 = rOuter * Math.cos(rad);
-                const y2 = rOuter * Math.sin(rad);
-                ctxD.beginPath();
-                ctxD.moveTo(x1, y1);
-                ctxD.lineTo(x2, y2);
-                ctxD.strokeStyle = "#6b7280";
-                ctxD.lineWidth = 1.2;
-                ctxD.stroke();
-            }
-
-            // מחוג לפי Mach נוכחי
-            const M = getMachValue();
-            const frac = (M - minM) / (maxM - minM);
-            const angleDeg = -135 + frac * sweepDeg;
-            const angleRad = angleDeg * Math.PI / 180;
-            const rNeedle = radius - 14;
-            const nx = rNeedle * Math.cos(angleRad);
-            const ny = rNeedle * Math.sin(angleRad);
-
-            ctxD.beginPath();
-            ctxD.moveTo(0, 0);
-            ctxD.lineTo(nx, ny);
-            ctxD.strokeStyle = "#38bdf8";
-            ctxD.lineWidth = 2;
-            ctxD.stroke();
-
-            // מרכז
-            ctxD.beginPath();
-            ctxD.arc(0, 0, 4, 0, 2 * Math.PI);
-            ctxD.fillStyle = "#38bdf8";
-            ctxD.fill();
-
-            // טקסט Mach
-            ctxD.fillStyle = "#e5e7eb";
-            ctxD.font = "11px system-ui";
-            ctxD.textAlign = "center";
-            ctxD.textBaseline = "middle";
-            ctxD.fillText(M.toFixed(2) + " M", 0, radius * -0.4);
-
-            ctxD.restore();
+    canvas.addEventListener('touchend', (e) => {
+      if (e.touches.length === 0) {
+        if (lastTouchPos && !dragLockedTouch) {
+          const rect = canvas.getBoundingClientRect();
+          handlePointerClick(lastTouchPos.x, lastTouchPos.y);
         }
+        lastTouchPos = null;
+        dragLockedTouch = false;
+      }
+    });
 
-        function machDialSetByPointer(clientX, clientY) {
-            if (!machDialCanvas) return;
-            const rect = machDialCanvas.getBoundingClientRect();
-            const cx = rect.left + rect.width / 2;
-            const cy = rect.top + rect.height / 2;
-            const dx = clientX - cx;
-            const dy = clientY - cy;
-            let angle = Math.atan2(dy, dx); // -π..π
-            let deg = angle * 180 / Math.PI;
+    window.highlightMachCasAlt = function (M, cas, altFt) {
+      const mNum = Number(M), casNum = Number(cas);
+      if (!isFinite(mNum) || !isFinite(casNum)) return;
+      addMachLineIfMissing(mNum);
+      let useAltFt = altFt;
+      if (!isFinite(useAltFt)) {
+        const hM = findAltitudeForCasAndMach(mNum, casNum);
+        if (hM === null) return;
+        useAltFt = hM * FT_PER_M;
+      }
+      const altNum = Number(useAltFt);
+      if (!isFinite(altNum)) return;
+      lockedPoint = { M: mNum, cas: casNum, altFt: altNum };
+      highlightCasTick = Math.round(casNum / casLabelStep) * casLabelStep;
+      highlightAltTick = Math.round(altNum / altLabelStep) * altLabelStep;
+      redraw(lockedPoint);
+      setResultBoxFromValues(mNum, casNum, altNum);
+      const tas = tasFromPoint(lockedPoint);
+      const tasStr = tas ? tas.toFixed(1) : "N/A";
+      const deltaStr = (isaDeviationC >= 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
+      infoDiv.textContent =
+        `LOCKED (API) → Mach ${mNum.toFixed(2)} | CAS ${casNum.toFixed(1)} kt | Alt ${altNum.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
+    };
 
-            // תחום הדיאל: -135..+135
-            if (deg < -135) deg = -135;
-            if (deg > 135) deg = 135;
+    function runAeroCalcFromPanel() {
+      let M = parseFloat(document.getElementById('machInput').value);
+      let cas = parseFloat(document.getElementById('casInput').value);
+      let alt = parseFloat(document.getElementById('altInput').value);
+      let dIsa = parseInt(isaSlider.value, 10) || 0;
+      isaDeviationC = dIsa;
+      const sign = dIsa >= 0 ? "+" : "";
+      isaValueSpan.textContent = `${sign}${dIsa}°C`;
+      isaSlider.value = dIsa;
 
-            const frac = (deg + 135) / 270;
-            let M = 0.6 + frac * (1.2 - 0.6);
-            M = Math.round(M * 100) / 100; // קוונטות 0.01
+      let solvedM = M, solvedCas = cas, solvedAlt = alt;
+      if (calcMode === "solveMach") {
+        if (!isFinite(cas) || !isFinite(alt)) { alert("Mach mode: enter CAS & Alt"); return; }
+        const mRes = solveMachGivenCasAlt(cas, alt);
+        if (mRes === null) { alert("No Mach solution"); return; }
+        solvedM = mRes; solvedCas = cas; solvedAlt = alt;
+        document.getElementById('machInput').value = solvedM.toFixed(3);
+        const machSlider = document.getElementById('machSlider');
+        if (machSlider) machSlider.value = solvedM;
+      } else if (calcMode === "solveCas") {
+        if (!isFinite(M) || !isFinite(alt)) { alert("CAS mode: enter Mach & Alt"); return; }
+        const altM = alt / FT_PER_M;
+        const casRes = casFromMachAndAlt(M, altM);
+        solvedM = M; solvedCas = casRes; solvedAlt = alt;
+        document.getElementById('casInput').value = solvedCas.toFixed(1);
+      } else {
+        if (!isFinite(M) || !isFinite(cas)) { alert("Alt mode: enter Mach & CAS"); return; }
+        const hM = findAltitudeForCasAndMach(M, cas);
+        if (hM === null) { alert("No altitude solution"); return; }
+        solvedM = M; solvedCas = cas; solvedAlt = hM * FT_PER_M;
+        document.getElementById('altInput').value = solvedAlt.toFixed(0);
+      }
 
-            const machInput = document.getElementById('machInput');
-            const machSlider = document.getElementById('machSlider');
-            machInput.value = M.toFixed(2);
-            if (machSlider) machSlider.value = M;
+      if (!isFinite(solvedM) || !isFinite(solvedCas) || !isFinite(solvedAlt)) {
+        alert("Invalid solution"); return;
+      }
 
-            drawMachDial();
-            markChanged();
+      const casSlider = document.getElementById('casSlider');
+      const machSlider = document.getElementById('machSlider');
+      const altSlider = document.getElementById('altSlider');
+      if (casSlider) casSlider.value = solvedCas;
+      if (machSlider) machSlider.value = solvedM;
+      if (altSlider) altSlider.value = solvedAlt;
+      drawMachDial();
+      setResultBoxFromValues(solvedM, solvedCas, solvedAlt);
+      addMachLineIfMissing(solvedM);
+      window.highlightMachCasAlt(solvedM, solvedCas, solvedAlt);
+      setSolveEnabled(false);
+    }
+
+    function applyModeFromInputs() {
+      const all = ['CAS', 'MACH', 'ALT'];
+      const output = all.find(p => !inputParams.includes(p));
+      if (output === 'CAS') setCalcMode("solveCas");
+      else if (output === 'MACH') setCalcMode("solveMach");
+      else setCalcMode("solveAlt");
+    }
+
+    function setCalcMode(mode) {
+      calcMode = mode;
+      const tabCas = document.getElementById('tabCas');
+      const tabMach = document.getElementById('tabMach');
+      const tabAlt = document.getElementById('tabAlt');
+      const casInput = document.getElementById('casInput');
+      const machInput = document.getElementById('machInput');
+      const altInput = document.getElementById('altInput');
+      const casSlider = document.getElementById('casSlider');
+      const machSlider = document.getElementById('machSlider');
+      const altSlider = document.getElementById('altSlider');
+      const casSpin = document.getElementById('casSpin');
+      const machSpin = document.getElementById('machSpin');
+      const altSpin = document.getElementById('altSpin');
+      const casWrapper = document.getElementById('casWrapper');
+      const machWrapper = document.getElementById('machWrapper');
+      const altWrapper = document.getElementById('altWrapper');
+
+      tabCas.classList.remove('selected');
+      tabMach.classList.remove('selected');
+      tabAlt.classList.remove('selected');
+      casWrapper.classList.remove('output-param');
+      machWrapper.classList.remove('output-param');
+      altWrapper.classList.remove('output-param');
+
+      casInput.disabled = false;
+      machInput.disabled = false;
+      altInput.disabled = false;
+      if (casSlider) casSlider.disabled = false;
+      if (machSlider) machSlider.disabled = false;
+      if (altSlider) altSlider.disabled = false;
+      casSpin.style.display = "inline-flex";
+      machSpin.style.display = "inline-flex";
+      altSpin.style.display = "inline-flex";
+
+      const all = ['CAS', 'MACH', 'ALT'];
+      const output = all.find(p => !inputParams.includes(p));
+      if (inputParams.includes('CAS')) tabCas.classList.add('selected');
+      if (inputParams.includes('MACH')) tabMach.classList.add('selected');
+      if (inputParams.includes('ALT')) tabAlt.classList.add('selected');
+
+      if (output === 'CAS') {
+        casWrapper.classList.add('output-param');
+        casInput.disabled = true;
+        if (casSlider) casSlider.disabled = true;
+        casSpin.style.display = "none";
+      } else if (output === 'MACH') {
+        machWrapper.classList.add('output-param');
+        machInput.disabled = true;
+        if (machSlider) machSlider.disabled = true;
+        machSpin.style.display = "none";
+      } else {
+        altWrapper.classList.add('output-param');
+        altInput.disabled = true;
+        if (altSlider) altSlider.disabled = true;
+        altSpin.style.display = "none";
+      }
+      markChanged();
+    }
+
+    function toggleParamInput(paramName) {
+      const idx = inputParams.indexOf(paramName);
+      if (idx !== -1) return;
+      inputParams.push(paramName);
+      if (inputParams.length > 2) inputParams.shift();
+      applyModeFromInputs();
+    }
+
+    function resizeCanvas() {
+      const container = document.getElementById('container');
+      const maxWidth = 600;
+      const deviceWidth = container.clientWidth || window.innerWidth - 32;
+      const width = Math.min(maxWidth, deviceWidth);
+      const height = width * 1.2;
+      canvas.width = width;
+      canvas.height = height;
+      redraw(currentPoint || lockedPoint || null);
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    function attachSpinButtons() {
+      document.querySelectorAll('.spin-buttons').forEach(spin => {
+        const targetId = spin.dataset.target;
+        const step = parseFloat(spin.dataset.step) || 1;
+        const min = spin.dataset.min !== undefined ? parseFloat(spin.dataset.min) : null;
+        const max = spin.dataset.max !== undefined ? parseFloat(spin.dataset.max) : null;
+        const input = document.getElementById(targetId);
+        if (!input) return;
+        function getVal() {
+          let v = parseFloat(input.value);
+          if (isNaN(v)) v = 0;
+          return v;
         }
+        function setVal(v) {
+          if (min !== null && v < min) v = min;
+          if (max !== null && v > max) v = max;
+          input.value = step >= 1 ? v.toFixed(0) : v.toFixed(2);
+          const casSlider = document.getElementById('casSlider');
+          const machSlider = document.getElementById('machSlider');
+          const altSlider = document.getElementById('altSlider');
+          if (targetId === 'casInput' && casSlider) casSlider.value = v;
+          else if (targetId === 'machInput' && machSlider) machSlider.value = v;
+          else if (targetId === 'altInput' && altSlider) altSlider.value = v;
+          if (targetId === 'machInput') drawMachDial();
+          markChanged();
+        }
+        function adjust(sign) { setVal(getVal() + sign * step); }
+        const up = spin.querySelector('.spin-up');
+        const down = spin.querySelector('.spin-down');
+        if (up) up.addEventListener('click', () => adjust(+1));
+        if (down) down.addEventListener('click', () => adjust(-1));
+      });
+    }
 
-        // ==== coordinate transforms ====
+    function attachTextInputSync() {
+      const casInput = document.getElementById('casInput');
+      const machInput = document.getElementById('machInput');
+      const altInput = document.getElementById('altInput');
+      const casSlider = document.getElementById('casSlider');
+      const machSlider = document.getElementById('machSlider');
+      const altSlider = document.getElementById('altSlider');
+
+      casInput.addEventListener('input', (e) => {
+        e.stopPropagation();
+        const v = parseFloat(casInput.value);
+        if (!isNaN(v) && casSlider) casSlider.value = v;
+        markChanged();
+      });
+      machInput.addEventListener('input', (e) => {
+        e.stopPropagation();
+        let v = parseFloat(machInput.value);
+        if (!isNaN(v)) {
+          v = clampMachValue(v);
+          machInput.value = v.toFixed(2);
+          if (machSlider) machSlider.value = v;
+        }
+        drawMachDial();
+        markChanged();
+      });
+      altInput.addEventListener('input', (e) => {
+        e.stopPropagation();
+        const v = parseFloat(altInput.value);
+        if (!isNaN(v) && altSlider) altSlider.value = v;
+        markChanged();
+      });
+
+      ['casInput', 'machInput', 'altInput'].forEach(id => {
+        const el = document.getElementById(id);
+        el.addEventListener('click', (ev) => ev.stopPropagation());
+      });
+    }
+
+    isaSlider.addEventListener('input', () => {
+      isaDeviationC = parseInt(isaSlider.value, 10) || 0;
+      const sign = isaDeviationC >= 0 ? "+" : "";
+      isaValueSpan.textContent = `${sign}${isaDeviationC}°C`;
+      if (currentPoint || lockedPoint) {
+        redraw(currentPoint || lockedPoint);
+        const p = lockedPoint || currentPoint;
+        setResultBoxFromValues(p.M, p.cas, p.altFt);
+        const tas = tasFromPoint(p);
+        const tasStr = tas ? tas.toFixed(1) : "N/A";
+        const deltaStr = (isaDeviationC >= 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
+        infoDiv.textContent =
+          `${lockedPoint ? "LOCKED → " : ""}Mach ${p.M.toFixed(2)} | CAS ${p.cas.toFixed(1)} kt | Alt ${p.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
+      } else {
+        redraw(null);
+      }
+      markChanged();
+    });
+
+    function initMachDial() {
+      machDialCanvas = document.getElementById('machDial');
+      if (!machDialCanvas) return;
+      machDialCtx = machDialCanvas.getContext('2d');
+      drawMachDial();
+      machDialCanvas.addEventListener('mousedown', (e) => {
+        machDialDragging = true;
+        machDialSetByPointer(e.clientX, e.clientY);
+      });
+      window.addEventListener('mousemove', (e) => {
+        if (!machDialDragging) return;
+        machDialSetByPointer(e.clientX, e.clientY);
+      });
+      window.addEventListener('mouseup', () => { machDialDragging = false; });
+      machDialCanvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        machDialDragging = true;
+        const t = e.touches[0];
+        machDialSetByPointer(t.clientX, t.clientY);
+      }, { passive: false });
+      machDialCanvas.addEventListener('touchmove', (e) => {
+        if (!machDialDragging) return;
+        e.preventDefault();
+        const t = e.touches[0];
+        machDialSetByPointer(t.clientX, t.clientY);
+      }, { passive: false });
+      machDialCanvas.addEventListener('touchend', () => { machDialDragging = false; }, { passive: false });
+    }
+
+    function initParamSelection() {
+      document.getElementById('tabCas').addEventListener('click', () => { toggleParamInput('CAS'); });
+      document.getElementById('tabMach').addEventListener('click', () => { toggleParamInput('MACH'); });
+      document.getElementById('tabAlt').addEventListener('click', () => { toggleParamInput('ALT'); });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      solveButton.addEventListener('click', runAeroCalcFromPanel);
+      attachSpinButtons();
+      attachTextInputSync();
+      initMachDial();
+      initParamSelection();
+      applyModeFromInputs();
+      resizeCanvas();
+      setSolveEnabled(false);
+      resultDiv.textContent = "Result will appear here…";
+    });
+
+    buildData();
+  </script>
+</body>
+</html>
