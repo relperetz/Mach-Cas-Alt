@@ -125,7 +125,7 @@
             display: flex;
             gap: 10px;
             margin-top: 10px;
-            margin-bottom: 4px;
+            margin-bottom: 6px;
         }
 
         .tab {
@@ -168,26 +168,24 @@
             margin-top: 6px;
         }
 
-        /* ===== פרמטרים בשורה אחת בדסקטופ, אחד מתחת לשני במובייל ===== */
-        .param-grid {
+        /* === פרמטרים – טור מתחת לכפתור, הכל באותו רוחב === */
+        .param-inline-row {
             display: flex;
             gap: 10px;
-            justify-content: space-between;
-            flex-wrap: nowrap;
         }
 
-        .param-col {
-            flex: 1 1 0;
-            min-width: 0;
-            padding: 6px 6px;
-            border-radius: 12px;
+        .param-stack {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 6px;
         }
 
         .input-wrapper {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
             width: 100%;
+            border-radius: 12px;
+            padding: 4px 2px 6px;
         }
 
         .input-wrapper.active-solve {
@@ -195,68 +193,47 @@
             box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.4);
         }
 
-        .param-label {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            text-align: left;
-            margin-bottom: 2px;
-        }
-
-        .param-label.clickable {
-            cursor: pointer;
-        }
-
-        .param-input-row {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .field {
-            flex: 1;
-            height: 40px;
-            padding: 4px 8px;
-            border-radius: 10px;
+        .value-input {
+            width: 100%;
+            height: 44px;
+            border-radius: 12px;
             border: 1px solid var(--border-subtle);
             background: var(--bg-input);
             color: var(--text-main);
-            font-size: 0.85rem;
+            font-size: 1rem;
+            padding: 6px 8px;
+            text-align: center;
             outline: none;
-            text-align: right;
             transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
         }
 
-        .field:focus {
+        .value-input:focus {
             border-color: var(--accent);
             background: var(--bg-input-focus);
             box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.4);
         }
 
-        .field:disabled {
+        .value-input:disabled {
             opacity: 0.55;
             cursor: default;
         }
 
-        .unit {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            min-width: 32px;
-            text-align: center;
+        .param-slider {
+            width: 100%;
         }
 
-        .param-spin-row {
+        .spin-buttons-row {
             display: flex;
             justify-content: center;
-            gap: 4px;
         }
 
         .spin-buttons {
-            display: flex;
+            display: inline-flex;
             gap: 4px;
         }
 
         .spin-buttons button {
-            width: 28px;
+            width: 30px;
             height: 24px;
             border-radius: 6px;
             border: 1px solid #374151;
@@ -270,15 +247,6 @@
         .spin-buttons button:hover {
             border-color: #4b5563;
             background: #030712;
-        }
-
-        .param-slider {
-            width: 100%;
-        }
-
-        .param-slider-short {
-            width: 100%;
-            margin-top: 4px;
         }
 
         .primary-btn {
@@ -297,6 +265,7 @@
             box-shadow:
                 0 12px 30px rgba(56, 189, 248, 0.5),
                 0 0 0 1px rgba(15, 23, 42, 0.9);
+            text-align: center;
         }
 
         .primary-btn span.icon {
@@ -313,18 +282,13 @@
 
         .form-row {
             display: grid;
-            grid-template-columns: 260px minmax(0, 1fr);
-            gap: 12px;
+            grid-template-columns: 1fr;
+            gap: 8px;
             align-items: center;
         }
 
-        .form-label {
-            font-size: 0.95rem;
-            color: var(--text-muted);
-            text-align: center;
-        }
-
         .action-wrapper {
+            display: flex;
             justify-content: center;
         }
 
@@ -391,29 +355,10 @@
             width: 220px;
         }
 
-        /* === מובייל: פרמטרים אחד מתחת לשני, בלי חפיפות === */
+        /* === מובייל – שומרים על 3 טורים אבל עם ריווח נעים === */
         @media (max-width: 680px) {
             .card {
                 padding: 16px 12px 14px;
-            }
-
-            .param-grid {
-                flex-direction: column;
-                flex-wrap: nowrap;
-            }
-
-            .param-col {
-                padding: 4px 0;
-            }
-        }
-
-        @media (max-width: 720px) {
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-
-            .solve-label {
-                text-align: right;
             }
         }
     </style>
@@ -436,6 +381,7 @@
             <div class="solve-label" dir="rtl">בחר פרמטר לחישוב, פרינצי:</div>
         </div>
 
+        <!-- כפתורי בחירת הפרמטר -->
         <div class="tabs">
             <button class="tab" id="tabCas">
                 <span>CAS</span><span>knots</span>
@@ -449,54 +395,42 @@
         </div>
 
         <div class="form-rows">
-            <!-- גריד של שלושת הפרמטרים -->
-            <div class="param-grid">
+            <!-- ערכים מתחת לכל כפתור -->
+            <div class="param-inline-row">
                 <!-- CAS -->
-                <div class="param-col input-wrapper" id="casWrapper">
-                    <div class="param-label clickable" id="casLabel">Calibrated Airspeed (CAS):</div>
-                    <div class="param-input-row">
-                        <input id="casInput" type="number" step="1" value="350" class="field">
-                        <span class="unit">kts</span>
-                    </div>
-                    <div class="param-spin-row">
+                <div class="param-stack input-wrapper" id="casWrapper">
+                    <input id="casInput" type="number" step="1" value="350" class="value-input">
+                    <input id="casSlider" class="param-slider" type="range" min="150" max="700" step="10" value="350">
+                    <div class="spin-buttons-row">
                         <div class="spin-buttons" id="casSpin" data-target="casInput" data-step="10" data-min="150" data-max="700">
                             <button type="button" class="spin-up">▲</button>
                             <button type="button" class="spin-down">▼</button>
                         </div>
                     </div>
-                    <input id="casSlider" class="param-slider param-slider-short" type="range" min="150" max="700" step="10" value="350">
                 </div>
 
                 <!-- Mach -->
-                <div class="param-col input-wrapper" id="machWrapper">
-                    <div class="param-label clickable" id="machLabel">Mach Number:</div>
-                    <div class="param-input-row">
-                        <input id="machInput" type="number" step="0.01" value="0.80" class="field">
-                        <span class="unit">M</span>
-                    </div>
-                    <div class="param-spin-row">
+                <div class="param-stack input-wrapper" id="machWrapper">
+                    <input id="machInput" type="number" step="0.01" value="0.80" class="value-input">
+                    <input id="machSlider" class="param-slider" type="range" min="0.6" max="1.2" step="0.01" value="0.80">
+                    <div class="spin-buttons-row">
                         <div class="spin-buttons" id="machSpin" data-target="machInput" data-step="0.01" data-min="0.6" data-max="1.2">
                             <button type="button" class="spin-up">▲</button>
                             <button type="button" class="spin-down">▼</button>
                         </div>
                     </div>
-                    <input id="machSlider" class="param-slider param-slider-short" type="range" min="0.6" max="1.2" step="0.01" value="0.80">
                 </div>
 
                 <!-- Alt -->
-                <div class="param-col input-wrapper" id="altWrapper">
-                    <div class="param-label clickable" id="altLabel">Altitude:</div>
-                    <div class="param-input-row">
-                        <input id="altInput" type="number" step="100" value="23000" class="field">
-                        <span class="unit">ft</span>
-                    </div>
-                    <div class="param-spin-row">
+                <div class="param-stack input-wrapper" id="altWrapper">
+                    <input id="altInput" type="number" step="100" value="23000" class="value-input">
+                    <input id="altSlider" class="param-slider" type="range" min="0" max="40000" step="1000" value="23000">
+                    <div class="spin-buttons-row">
                         <div class="spin-buttons" id="altSpin" data-target="altInput" data-step="1000" data-min="0" data-max="40000">
                             <button type="button" class="spin-up">▲</button>
                             <button type="button" class="spin-down">▼</button>
                         </div>
                     </div>
-                    <input id="altSlider" class="param-slider param-slider-short" type="range" min="0" max="40000" step="1000" value="23000">
                 </div>
             </div>
 
@@ -507,7 +441,6 @@
             </div>
 
             <div class="form-row action-row">
-                <div class="form-label"></div>
                 <div class="input-wrapper action-wrapper">
                     <button id="solveButton" class="primary-btn" disabled>
                         <span class="icon">✈️</span>
@@ -580,7 +513,6 @@
         let viewAltMax = 30000;
 
         // pinch state
-        let isPinching = false;
         let pinchOrientation = null;
         let pinchStartDist = 0;
         let pinchStartViewCasMin = viewCasMin;
@@ -591,14 +523,12 @@
         let dragLockedTouch = false;
 
         let calcMode = "solveAlt";
-        let hasPendingChanges = false;
 
         function setSolveEnabled(enabled) {
             solveButton.disabled = !enabled;
         }
 
         function markChanged() {
-            hasPendingChanges = true;
             setSolveEnabled(true);
         }
 
@@ -941,7 +871,6 @@
                 ctx.stroke();
             }
 
-            // labels בגובה אמצעי החלון
             const labelAltFt = (viewAltMin + viewAltMax) / 2;
             ctx.font = "11px system-ui";
             ctx.fillStyle = "#bfdbfe";
@@ -1248,9 +1177,6 @@
             const rect = canvas.getBoundingClientRect();
 
             if (e.touches.length === 2) {
-                isPinching = true;
-                dragLockedTouch = false;
-
                 const t1 = e.touches[0];
                 const t2 = e.touches[1];
                 const dx = t2.clientX - t1.clientX;
@@ -1353,9 +1279,6 @@
         }, { passive: false });
 
         canvas.addEventListener('touchend', (e) => {
-            if (e.touches.length < 2) {
-                isPinching = false;
-            }
             if (e.touches.length === 0) {
                 if (lastTouchPos && !dragLockedTouch) {
                     const rect = canvas.getBoundingClientRect();
@@ -1478,7 +1401,6 @@
             addMachLineIfMissing(solvedM);
             window.highlightMachCasAlt(solvedM, solvedCas, solvedAlt);
 
-            hasPendingChanges = false;
             setSolveEnabled(false);
         }
 
@@ -1519,9 +1441,9 @@
             casSlider.disabled = false;
             machSlider.disabled = false;
             altSlider.disabled = false;
-            casSpin.style.display = "flex";
-            machSpin.style.display = "flex";
-            altSpin.style.display = "flex";
+            casSpin.style.display = "inline-flex";
+            machSpin.style.display = "inline-flex";
+            altSpin.style.display = "inline-flex";
 
             if (mode === "solveCas") {
                 tabCas.classList.add('active');
@@ -1672,10 +1594,6 @@
             document.getElementById('tabCas').addEventListener('click', () => setCalcMode("solveCas"));
             document.getElementById('tabMach').addEventListener('click', () => setCalcMode("solveMach"));
             document.getElementById('tabAlt').addEventListener('click', () => setCalcMode("solveAlt"));
-
-            document.getElementById('casLabel').addEventListener('click', () => setCalcMode("solveCas"));
-            document.getElementById('machLabel').addEventListener('click', () => setCalcMode("solveMach"));
-            document.getElementById('altLabel').addEventListener('click', () => setCalcMode("solveAlt"));
 
             attachSpinButtons();
             attachParamSliders();
