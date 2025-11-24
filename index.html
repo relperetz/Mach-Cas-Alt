@@ -183,9 +183,16 @@
             border-radius: 12px;
         }
 
+        /* פרמטר בחישוב – בלי מסגרת, בלי צל */
         .param-stack.active-solve {
-            border: 1px solid var(--accent);
-            box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.4);
+            border: none !important;
+            box-shadow: none !important;
+        }
+
+        /* בפרמטר בחישוב – מסתירים סליידר וחיצים, נשארת רק תיבת טקסט */
+        .param-stack.active-solve .param-slider,
+        .param-stack.active-solve .spin-buttons-row {
+            display: none !important;
         }
 
         .value-input {
@@ -346,7 +353,6 @@
             text-align: left;
         }
 
-        /* רק ISA מקבל רוחב קבוע יחסי, שאר הסליידרים 100% מהעמודה */
         #isaSlider {
             width: 220px;
             max-width: 100%;
@@ -1187,7 +1193,7 @@
 
                 const factor = pinchStartDist / distAxis;
 
-                // zoom (באופן בלתי תלוי בציר)
+                // zoom
                 if (pinchOrientation === 'horizontal') {
                     let width0 = pinchStartViewCasMax - pinchStartViewCasMin;
                     let newWidth = width0 * factor;
@@ -1212,7 +1218,7 @@
                     viewAltMax = newMaxAlt;
                 }
 
-                // pan – לפי תזוזת מרכז שתי האצבעות
+                // pan
                 const midX = (x1 + x2) / 2;
                 const midY = (y1 + y2) / 2;
                 const midCas = casFromX(midX);
