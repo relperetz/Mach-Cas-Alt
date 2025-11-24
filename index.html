@@ -50,7 +50,7 @@
       padding: 18px 20px 16px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 4px;
     }
 
     .card-header {
@@ -90,8 +90,8 @@
     .tabs-row {
       display: flex;
       gap: 10px;
-      margin-top: 10px;
-      margin-bottom: 6px;
+      margin-top: 2px;
+      margin-bottom: 2px;
     }
 
     .param-block {
@@ -99,6 +99,7 @@
       display: flex;
       flex-direction: column;
       gap: 6px;
+      min-width: 0; /* חשוב כדי לאפשר לשלושתן להיכנס בשורה */
     }
 
     .tab {
@@ -129,6 +130,9 @@
     .tab .main-label {
       font-weight: 600;
       font-size: 0.9rem;
+      display: block;
+      width: 100%;
+      text-align: center; /* מרכז גם בספארי באייפון */
     }
 
     .tab.selected {
@@ -144,7 +148,7 @@
       border: 1px solid var(--border-subtle);
       background: var(--bg-input);
       color: var(--text-main);
-      font-size: 2.00rem;
+      font-size: 1.5rem;
       font-weight: 600;
       padding: 4px 6px;
       text-align: center;
@@ -244,7 +248,7 @@
 
     .result-box {
       margin-top: 8px;
-      font-size: 0.82rem;
+      font-size: 0.9rem;
       background: #020617;
       border-radius: 10px;
       padding: 6px 8px;
@@ -308,6 +312,16 @@
       body { padding: 12px 8px; }
       .card, #container { max-width: 360px; margin: 0 auto; }
       .tabs-row { gap: 6px; }
+
+      /* על מובייל – החיצים אחד מעל השני כדי שהכול ייכנס בשורה */
+      .spin-buttons {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .spin-buttons button {
+        width: 60px;  /* אותו רוחב כמו עכשיו */
+      }
     }
   </style>
 </head>
@@ -321,7 +335,7 @@
         </div>
       </div>
       <div class="solve-label" dir="rtl">
-        בחר שני פרמטרים לקלט – השלישי יחושב עבורך, פרינצי:
+        בחר שני ערכים לחישוב, פרינצי:
       </div>
     </div>
 
@@ -617,11 +631,11 @@
     function setResultBoxFromValues(M, cas, altFt) {
       if (!isFinite(M) || !isFinite(cas) || !isFinite(altFt)) return;
       const tasVal = tasFromPoint({ M, altFt });
-      const tasStr = tasVal ? tasVal.toFixed(1) : "N/A";
+      const tasStr = tasVal ? tasVal.toFixed(0) : "N/A";
       const dIsaStr = (isaDeviationC >= 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
       resultDiv.innerHTML =
         `Mach: <b>${M.toFixed(2)} M</b> | ` +
-        `CAS: <b>${cas.toFixed(1)} kt</b> | ` +
+        `CAS: <b>${cas.toFixed(0)} kt</b> | ` +
         `Alt: <b>${altFt.toFixed(0)} ft</b> | ` +
         `TAS: <b>${tasStr} kt</b> | ` +
         `ISA: <b>${dIsaStr}</b>`;
@@ -895,8 +909,10 @@
       const tas = tasFromPoint(lockedPoint);
       const tasStr = tas ? tas.toFixed(1) : "N/A";
       const deltaStr = (isaDeviationC >= 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
-      infoDiv.textContent =
-        `LOCKED → Mach ${lockedPoint.M.toFixed(2)} | CAS ${lockedPoint.cas.toFixed(1)} kt | Alt ${lockedPoint.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
+      if (infoDiv) {
+        infoDiv.textContent =
+          `LOCKED → Mach ${lockedPoint.M.toFixed(2)} | CAS ${lockedPoint.cas.toFixed(1)} kt | Alt ${lockedPoint.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
+      }
     }
 
     function handlePointerMove(mx, my) {
@@ -908,8 +924,10 @@
         const tas = tasFromPoint(lockedPoint);
         const tasStr = tas ? tas.toFixed(1) : "N/A";
         const deltaStr = (isaDeviationC >= 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
-        infoDiv.textContent =
-          `LOCKED → Mach ${lockedPoint.M.toFixed(2)} | CAS ${lockedPoint.cas.toFixed(1)} kt | Alt ${lockedPoint.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
+        if (infoDiv) {
+          infoDiv.textContent =
+            `LOCKED → Mach ${lockedPoint.M.toFixed(2)} | CAS ${lockedPoint.cas.toFixed(1)} kt | Alt ${lockedPoint.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
+        }
         return;
       }
       if (mx < marginLeft || mx > canvas.width - marginRight ||
@@ -917,7 +935,7 @@
         highlightCasTick = null;
         highlightAltTick = null;
         redraw(null);
-        infoDiv.textContent = "Move mouse or finger near a Mach line…";
+        if (infoDiv) infoDiv.textContent = "Move mouse or finger near a Mach line…";
         return;
       }
       const nearest = findNearestOnLines(mx, my);
@@ -929,16 +947,20 @@
         const tas = tasFromPoint(nearest);
         const tasStr = tas ? tas.toFixed(1) : "N/A";
         const deltaStr = (isaDeviationC >= 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
-        infoDiv.textContent =
-          `Mach ${nearest.M.toFixed(2)} | CAS ${nearest.cas.toFixed(1)} kt | Alt ${nearest.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
+        if (infoDiv) {
+          infoDiv.textContent =
+            `Mach ${nearest.M.toFixed(2)} | CAS ${nearest.cas.toFixed(1)} kt | Alt ${nearest.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
+        }
       } else {
         highlightCasTick = null;
         highlightAltTick = null;
         redraw(null);
         const casApprox = casFromX(mx).toFixed(0);
         const altApprox = altFromY(my).toFixed(0);
-        infoDiv.textContent =
-          `Not on a Mach line. Approx: CAS ≈ ${casApprox} kt, Alt ≈ ${altApprox} ft`;
+        if (infoDiv) {
+          infoDiv.textContent =
+            `Not on a Mach line. Approx: CAS ≈ ${casApprox} kt, Alt ≈ ${altApprox} ft`;
+        }
       }
     }
 
@@ -955,8 +977,10 @@
         const tas = tasFromPoint(lockedPoint);
         const tasStr = tas ? tas.toFixed(1) : "N/A";
         const deltaStr = (isaDeviationC >= 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
-        infoDiv.textContent =
-          `LOCKED → Mach ${lockedPoint.M.toFixed(2)} | CAS ${lockedPoint.cas.toFixed(1)} kt | Alt ${lockedPoint.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
+        if (infoDiv) {
+          infoDiv.textContent =
+            `LOCKED → Mach ${lockedPoint.M.toFixed(2)} | CAS ${lockedPoint.cas.toFixed(1)} kt | Alt ${lockedPoint.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
+        }
       }
     }
 
@@ -974,13 +998,15 @@
         const tas = tasFromPoint(lockedPoint);
         const tasStr = tas ? tas.toFixed(1) : "N/A";
         const deltaStr = (isaDeviationC >= 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
-        infoDiv.textContent =
-          `LOCKED → Mach ${lockedPoint.M.toFixed(2)} | CAS ${lockedPoint.cas.toFixed(1)} kt | Alt ${lockedPoint.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
+        if (infoDiv) {
+          infoDiv.textContent =
+            `LOCKED → Mach ${lockedPoint.M.toFixed(2)} | CAS ${lockedPoint.cas.toFixed(1)} kt | Alt ${lockedPoint.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
+        }
       } else {
         highlightCasTick = null;
         highlightAltTick = null;
         redraw(null);
-        infoDiv.textContent = "Move mouse or finger near a Mach line…";
+        if (infoDiv) infoDiv.textContent = "Move mouse or finger near a Mach line…";
       }
     });
 
@@ -1138,8 +1164,10 @@
       const tas = tasFromPoint(lockedPoint);
       const tasStr = tas ? tas.toFixed(1) : "N/A";
       const deltaStr = (isaDeviationC >= 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
-      infoDiv.textContent =
-        `LOCKED (API) → Mach ${mNum.toFixed(2)} | CAS ${casNum.toFixed(1)} kt | Alt ${altNum.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
+      if (infoDiv) {
+        infoDiv.textContent =
+          `LOCKED (API) → Mach ${mNum.toFixed(2)} | CAS ${casNum.toFixed(1)} kt | Alt ${altNum.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
+      }
     };
 
     function runAeroCalcFromPanel() {
@@ -1363,8 +1391,10 @@
         const tas = tasFromPoint(p);
         const tasStr = tas ? tas.toFixed(1) : "N/A";
         const deltaStr = (isaDeviationC >= 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
-        infoDiv.textContent =
-          `${lockedPoint ? "LOCKED → " : ""}Mach ${p.M.toFixed(2)} | CAS ${p.cas.toFixed(1)} kt | Alt ${p.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
+        if (infoDiv) {
+          infoDiv.textContent =
+            `${lockedPoint ? "LOCKED → " : ""}Mach ${p.M.toFixed(2)} | CAS ${p.cas.toFixed(1)} kt | Alt ${p.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
+        }
       } else {
         redraw(null);
       }
