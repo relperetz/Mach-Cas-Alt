@@ -99,7 +99,6 @@
       display: flex;
       flex-direction: column;
       gap: 6px;
-      min-width: 0; /* חשוב כדי לאפשר לשלושתן להיכנס בשורה */
     }
 
     .tab {
@@ -130,9 +129,6 @@
     .tab .main-label {
       font-weight: 600;
       font-size: 0.9rem;
-      display: block;
-      width: 100%;
-      text-align: center; /* מרכז גם בספארי באייפון */
     }
 
     .tab.selected {
@@ -148,19 +144,25 @@
       border: 1px solid var(--border-subtle);
       background: var(--bg-input);
       color: var(--text-main);
-      font-size: 1.5rem;
+      font-size: 1.4rem;
       font-weight: 600;
       padding: 4px 6px;
       text-align: center;
       outline: none;
       transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
       width: 100%;
+      /* נוח לגרירה / Scrub */
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: pan-y;
+      cursor: ew-resize;
     }
 
     .value-input:focus {
       border-color: var(--accent);
       background: var(--bg-input-focus);
       box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.4);
+      cursor: text; /* בזמן פוקוס מקלדת */
     }
 
     .value-input:disabled { opacity: 0.7; cursor: default; }
@@ -174,29 +176,8 @@
 
     .param-slider { width: 100%; display: none; }
 
-    .spin-buttons-row { display: flex; justify-content: center; }
-
-    .spin-buttons {
-      display: inline-flex;
-      gap: 4px;
-    }
-
-    .spin-buttons button {
-      width: 60px;
-      height: 40px;
-      border-radius: 6px;
-      border: 1px solid #374151;
-      background: #020617;
-      color: #e5e7eb;
-      font-size: 1.2rem;
-      padding: 0;
-      cursor: pointer;
-    }
-
-    .spin-buttons button:hover {
-      border-color: #4b5563;
-      background: #030712;
-    }
+    /* חיצים בוטלו – השארתי רק המחלקות אם תרצה בעתיד */
+    .spin-buttons-row { display: none; }
 
     .param-block.output-param .param-slider,
     .param-block.output-param .spin-buttons-row {
@@ -312,16 +293,6 @@
       body { padding: 12px 8px; }
       .card, #container { max-width: 360px; margin: 0 auto; }
       .tabs-row { gap: 6px; }
-
-      /* על מובייל – החיצים אחד מעל השני כדי שהכול ייכנס בשורה */
-      .spin-buttons {
-        flex-direction: column;
-        align-items: center;
-      }
-
-      .spin-buttons button {
-        width: 60px;  /* אותו רוחב כמו עכשיו */
-      }
     }
   </style>
 </head>
@@ -349,12 +320,6 @@
           <div class="unit-label">kt</div>
         </button>
         <input id="casSlider" class="param-slider" type="range" min="150" max="700" step="10" value="350">
-        <div class="spin-buttons-row">
-          <div class="spin-buttons" id="casSpin" data-target="casInput" data-step="10" data-min="150" data-max="700">
-            <button type="button" class="spin-up">▲</button>
-            <button type="button" class="spin-down">▼</button>
-          </div>
-        </div>
       </div>
 
       <div class="param-block" id="machWrapper">
@@ -365,14 +330,7 @@
           <input id="machInput" type="number" step="0.01" value="0.80" class="value-input">
           <div class="unit-label">M</div>
         </button>
-        <!-- Dial removed -->
         <input id="machSlider" class="param-slider" type="range" min="0.6" max="1.2" step="0.01" value="0.80">
-        <div class="spin-buttons-row">
-          <div class="spin-buttons" id="machSpin" data-target="machInput" data-step="0.01" data-min="0.6" data-max="1.2">
-            <button type="button" class="spin-up">▲</button>
-            <button type="button" class="spin-down">▼</button>
-          </div>
-        </div>
       </div>
 
       <div class="param-block output-param" id="altWrapper">
@@ -384,12 +342,6 @@
           <div class="unit-label">ft</div>
         </button>
         <input id="altSlider" class="param-slider" type="range" min="0" max="40000" step="1000" value="23000">
-        <div class="spin-buttons-row">
-          <div class="spin-buttons" id="altSpin" data-target="altInput" data-step="1000" data-min="0" data-max="40000">
-            <button type="button" class="spin-up">▲</button>
-            <button type="button" class="spin-down">▼</button>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -418,8 +370,9 @@
   <div id="container">
     <canvas id="machCanvas"></canvas>
   </div>
-  <div id="info">Move mouse or finger near a Mach line…</div>
-  <div id="legend">
+  <!-- אפשר להשאיר מוסתר אם לא בא לך על טקסט -->
+  <div id="info" style="display:none;">Move mouse or finger near a Mach line…</div>
+  <div id="legend" style="display:none;">
     Range: CAS 150–700 kt, Alt 0–40,000 ft. Pinch to zoom & pan, tap Mach lines to lock & drag point.
   </div>
 
@@ -450,6 +403,10 @@
     const isaValueSpan = document.getElementById('isaValue');
     const solveButton = document.getElementById('solveButton');
     const resultDiv = document.getElementById('calcResult');
+
+    function setInfo(text) {
+      if (infoDiv) infoDiv.textContent = text;
+    }
 
     const marginLeft = 70;
     const marginRight = 25;
@@ -482,7 +439,6 @@
     let lastTouchPos = null;
     let dragLockedTouch = false;
 
-    // dial vars stay but dial element הוסר – הפונקציות ייצאו פשוט בלי לצייר
     let machDialCanvas = null;
     let machDialCtx = null;
     let machDialDragging = false;
@@ -577,12 +533,12 @@
     }
 
     function drawMachDial() {
-      // dial element removed – keep function no-op-safe
-      if (!machDialCanvas || !machDialCtx) return;
+      // no-op (dial הוסר)
+      return;
     }
 
     function machDialSetByPointer(clientX, clientY) {
-      if (!machDialCanvas) return;
+      return;
     }
 
     function xFromCas(cas) {
@@ -909,10 +865,9 @@
       const tas = tasFromPoint(lockedPoint);
       const tasStr = tas ? tas.toFixed(1) : "N/A";
       const deltaStr = (isaDeviationC >= 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
-      if (infoDiv) {
-        infoDiv.textContent =
-          `LOCKED → Mach ${lockedPoint.M.toFixed(2)} | CAS ${lockedPoint.cas.toFixed(1)} kt | Alt ${lockedPoint.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
-      }
+      setInfo(
+        `LOCKED → Mach ${lockedPoint.M.toFixed(2)} | CAS ${lockedPoint.cas.toFixed(1)} kt | Alt ${lockedPoint.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`
+      );
     }
 
     function handlePointerMove(mx, my) {
@@ -924,10 +879,9 @@
         const tas = tasFromPoint(lockedPoint);
         const tasStr = tas ? tas.toFixed(1) : "N/A";
         const deltaStr = (isaDeviationC >= 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
-        if (infoDiv) {
-          infoDiv.textContent =
-            `LOCKED → Mach ${lockedPoint.M.toFixed(2)} | CAS ${lockedPoint.cas.toFixed(1)} kt | Alt ${lockedPoint.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
-        }
+        setInfo(
+          `LOCKED → Mach ${lockedPoint.M.toFixed(2)} | CAS ${lockedPoint.cas.toFixed(1)} kt | Alt ${lockedPoint.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`
+        );
         return;
       }
       if (mx < marginLeft || mx > canvas.width - marginRight ||
@@ -935,7 +889,7 @@
         highlightCasTick = null;
         highlightAltTick = null;
         redraw(null);
-        if (infoDiv) infoDiv.textContent = "Move mouse or finger near a Mach line…";
+        setInfo("Move mouse or finger near a Mach line…");
         return;
       }
       const nearest = findNearestOnLines(mx, my);
@@ -947,20 +901,18 @@
         const tas = tasFromPoint(nearest);
         const tasStr = tas ? tas.toFixed(1) : "N/A";
         const deltaStr = (isaDeviationC >= 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
-        if (infoDiv) {
-          infoDiv.textContent =
-            `Mach ${nearest.M.toFixed(2)} | CAS ${nearest.cas.toFixed(1)} kt | Alt ${nearest.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
-        }
+        setInfo(
+          `Mach ${nearest.M.toFixed(2)} | CAS ${nearest.cas.toFixed(1)} kt | Alt ${nearest.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`
+        );
       } else {
         highlightCasTick = null;
         highlightAltTick = null;
         redraw(null);
         const casApprox = casFromX(mx).toFixed(0);
         const altApprox = altFromY(my).toFixed(0);
-        if (infoDiv) {
-          infoDiv.textContent =
-            `Not on a Mach line. Approx: CAS ≈ ${casApprox} kt, Alt ≈ ${altApprox} ft`;
-        }
+        setInfo(
+          `Not on a Mach line. Approx: CAS ≈ ${casApprox} kt, Alt ≈ ${altApprox} ft`
+        );
       }
     }
 
@@ -977,10 +929,9 @@
         const tas = tasFromPoint(lockedPoint);
         const tasStr = tas ? tas.toFixed(1) : "N/A";
         const deltaStr = (isaDeviationC >= 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
-        if (infoDiv) {
-          infoDiv.textContent =
-            `LOCKED → Mach ${lockedPoint.M.toFixed(2)} | CAS ${lockedPoint.cas.toFixed(1)} kt | Alt ${lockedPoint.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
-        }
+        setInfo(
+          `LOCKED → Mach ${lockedPoint.M.toFixed(2)} | CAS ${lockedPoint.cas.toFixed(1)} kt | Alt ${lockedPoint.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`
+        );
       }
     }
 
@@ -998,15 +949,14 @@
         const tas = tasFromPoint(lockedPoint);
         const tasStr = tas ? tas.toFixed(1) : "N/A";
         const deltaStr = (isaDeviationC >= 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
-        if (infoDiv) {
-          infoDiv.textContent =
-            `LOCKED → Mach ${lockedPoint.M.toFixed(2)} | CAS ${lockedPoint.cas.toFixed(1)} kt | Alt ${lockedPoint.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
-        }
+        setInfo(
+          `LOCKED → Mach ${lockedPoint.M.toFixed(2)} | CAS ${lockedPoint.cas.toFixed(1)} kt | Alt ${lockedPoint.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`
+        );
       } else {
         highlightCasTick = null;
         highlightAltTick = null;
         redraw(null);
-        if (infoDiv) infoDiv.textContent = "Move mouse or finger near a Mach line…";
+        setInfo("Move mouse or finger near a Mach line…");
       }
     });
 
@@ -1086,7 +1036,7 @@
           let newMin = center - newWidth / 2;
           let newMax = center + newWidth / 2;
           if (newMin < CAS_MIN) { newMin = CAS_MIN; newMax = CAS_MIN + newWidth; }
-          if (newMax > CAS_MAX) { newMax = CAS_MAX; newMin = CAS_MAX - newWidth; }
+          if (newMax > CAS_MAX) { newMax = CAS_MAX; newMax = CAS_MAX; newMin = CAS_MAX - newWidth; }
           viewCasMin = newMin;
           viewCasMax = newMax;
         } else {
@@ -1164,10 +1114,9 @@
       const tas = tasFromPoint(lockedPoint);
       const tasStr = tas ? tas.toFixed(1) : "N/A";
       const deltaStr = (isaDeviationC >= 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
-      if (infoDiv) {
-        infoDiv.textContent =
-          `LOCKED (API) → Mach ${mNum.toFixed(2)} | CAS ${casNum.toFixed(1)} kt | Alt ${altNum.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
-      }
+      setInfo(
+        `LOCKED (API) → Mach ${mNum.toFixed(2)} | CAS ${casNum.toFixed(1)} kt | Alt ${altNum.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`
+      );
     };
 
     function runAeroCalcFromPanel() {
@@ -1239,9 +1188,6 @@
       const casSlider = document.getElementById('casSlider');
       const machSlider = document.getElementById('machSlider');
       const altSlider = document.getElementById('altSlider');
-      const casSpin = document.getElementById('casSpin');
-      const machSpin = document.getElementById('machSpin');
-      const altSpin = document.getElementById('altSpin');
       const casWrapper = document.getElementById('casWrapper');
       const machWrapper = document.getElementById('machWrapper');
       const altWrapper = document.getElementById('altWrapper');
@@ -1259,9 +1205,6 @@
       if (casSlider) casSlider.disabled = false;
       if (machSlider) machSlider.disabled = false;
       if (altSlider) altSlider.disabled = false;
-      casSpin.style.display = "inline-flex";
-      machSpin.style.display = "inline-flex";
-      altSpin.style.display = "inline-flex";
 
       const all = ['CAS', 'MACH', 'ALT'];
       const output = all.find(p => !inputParams.includes(p));
@@ -1273,17 +1216,14 @@
         casWrapper.classList.add('output-param');
         casInput.disabled = true;
         if (casSlider) casSlider.disabled = true;
-        casSpin.style.display = "none";
       } else if (output === 'MACH') {
         machWrapper.classList.add('output-param');
         machInput.disabled = true;
         if (machSlider) machSlider.disabled = true;
-        machSpin.style.display = "none";
       } else {
         altWrapper.classList.add('output-param');
         altInput.disabled = true;
         if (altSlider) altSlider.disabled = true;
-        altSpin.style.display = "none";
       }
       markChanged();
     }
@@ -1307,40 +1247,6 @@
       redraw(currentPoint || lockedPoint || null);
     }
     window.addEventListener('resize', resizeCanvas);
-
-    function attachSpinButtons() {
-      document.querySelectorAll('.spin-buttons').forEach(spin => {
-        const targetId = spin.dataset.target;
-        const step = parseFloat(spin.dataset.step) || 1;
-        const min = spin.dataset.min !== undefined ? parseFloat(spin.dataset.min) : null;
-        const max = spin.dataset.max !== undefined ? parseFloat(spin.dataset.max) : null;
-        const input = document.getElementById(targetId);
-        if (!input) return;
-        function getVal() {
-          let v = parseFloat(input.value);
-          if (isNaN(v)) v = 0;
-          return v;
-        }
-        function setVal(v) {
-          if (min !== null && v < min) v = min;
-          if (max !== null && v > max) v = max;
-          input.value = step >= 1 ? v.toFixed(0) : v.toFixed(2);
-          const casSlider = document.getElementById('casSlider');
-          const machSlider = document.getElementById('machSlider');
-          const altSlider = document.getElementById('altSlider');
-          if (targetId === 'casInput' && casSlider) casSlider.value = v;
-          else if (targetId === 'machInput' && machSlider) machSlider.value = v;
-          else if (targetId === 'altInput' && altSlider) altSlider.value = v;
-          if (targetId === 'machInput') drawMachDial();
-          markChanged();
-        }
-        function adjust(sign) { setVal(getVal() + sign * step); }
-        const up = spin.querySelector('.spin-up');
-        const down = spin.querySelector('.spin-down');
-        if (up) up.addEventListener('click', () => adjust(+1));
-        if (down) down.addEventListener('click', () => adjust(-1));
-      });
-    }
 
     function attachTextInputSync() {
       const casInput = document.getElementById('casInput');
@@ -1380,6 +1286,74 @@
       });
     }
 
+    function attachScrubbers() {
+      const cfgs = {
+        casInput: { step: 10, min: 150, max: 700 },
+        machInput: { step: 0.01, min: 0.6, max: 1.2 },
+        altInput: { step: 100, min: 0, max: 40000 }
+      };
+
+      Object.keys(cfgs).forEach(id => {
+        const cfg = cfgs[id];
+        const input = document.getElementById(id);
+        if (!input) return;
+
+        let isScrubbing = false;
+        let startX = 0;
+        let startVal = 0;
+
+        input.addEventListener('pointerdown', (e) => {
+          if (input.disabled) return;
+          isScrubbing = true;
+          startX = e.clientX;
+          startVal = parseFloat(input.value) || 0;
+          input.setPointerCapture(e.pointerId);
+        });
+
+        input.addEventListener('pointermove', (e) => {
+          if (!isScrubbing) return;
+          const dx = e.clientX - startX;
+
+          // סנסיטיביטי – בערך כל 10px צעד אחד
+          const factor = cfg.step / 10;
+          let val = startVal + dx * factor;
+
+          if (cfg.step >= 1) {
+            val = Math.round(val / cfg.step) * cfg.step;
+          } else {
+            val = Math.round(val / cfg.step) * cfg.step;
+          }
+
+          if (id === 'machInput') {
+            val = clampMachValue(val);
+          }
+
+          if (val < cfg.min) val = cfg.min;
+          if (val > cfg.max) val = cfg.max;
+
+          input.value = cfg.step >= 1 ? val.toFixed(0) : val.toFixed(2);
+
+          const casSlider = document.getElementById('casSlider');
+          const machSlider = document.getElementById('machSlider');
+          const altSlider = document.getElementById('altSlider');
+          if (id === 'casInput' && casSlider) casSlider.value = val;
+          if (id === 'machInput' && machSlider) machSlider.value = val;
+          if (id === 'altInput' && altSlider) altSlider.value = val;
+
+          markChanged();
+        });
+
+        function endScrub(e) {
+          if (!isScrubbing) return;
+          isScrubbing = false;
+          try { input.releasePointerCapture(e.pointerId); } catch {}
+        }
+
+        input.addEventListener('pointerup', endScrub);
+        input.addEventListener('pointercancel', endScrub);
+      });
+    }
+
     isaSlider.addEventListener('input', () => {
       isaDeviationC = parseInt(isaSlider.value, 10) || 0;
       const sign = isaDeviationC >= 0 ? "+" : "";
@@ -1391,10 +1365,9 @@
         const tas = tasFromPoint(p);
         const tasStr = tas ? tas.toFixed(1) : "N/A";
         const deltaStr = (isaDeviationC >= 0 ? "+" : "") + isaDeviationC.toFixed(0) + "°C";
-        if (infoDiv) {
-          infoDiv.textContent =
-            `${lockedPoint ? "LOCKED → " : ""}Mach ${p.M.toFixed(2)} | CAS ${p.cas.toFixed(1)} kt | Alt ${p.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`;
-        }
+        setInfo(
+          `${lockedPoint ? "LOCKED → " : ""}Mach ${p.M.toFixed(2)} | CAS ${p.cas.toFixed(1)} kt | Alt ${p.altFt.toFixed(0)} ft | TAS ${tasStr} kt | ISA${deltaStr}`
+        );
       } else {
         redraw(null);
       }
@@ -1402,32 +1375,8 @@
     });
 
     function initMachDial() {
-      machDialCanvas = document.getElementById('machDial');
-      if (!machDialCanvas) return;
-      machDialCtx = machDialCanvas.getContext('2d');
-      drawMachDial();
-      machDialCanvas.addEventListener('mousedown', (e) => {
-        machDialDragging = true;
-        machDialSetByPointer(e.clientX, e.clientY);
-      });
-      window.addEventListener('mousemove', (e) => {
-        if (!machDialDragging) return;
-        machDialSetByPointer(e.clientX, e.clientY);
-      });
-      window.addEventListener('mouseup', () => { machDialDragging = false; });
-      machDialCanvas.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        machDialDragging = true;
-        const t = e.touches[0];
-        machDialSetByPointer(t.clientX, t.clientY);
-      }, { passive: false });
-      machDialCanvas.addEventListener('touchmove', (e) => {
-        if (!machDialDragging) return;
-        e.preventDefault();
-        const t = e.touches[0];
-        machDialSetByPointer(t.clientX, t.clientY);
-      }, { passive: false });
-      machDialCanvas.addEventListener('touchend', () => { machDialDragging = false; }, { passive: false });
+      // no-op
+      return;
     }
 
     function initParamSelection() {
@@ -1438,13 +1387,13 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       solveButton.addEventListener('click', runAeroCalcFromPanel);
-      attachSpinButtons();
       attachTextInputSync();
+      attachScrubbers();
       initMachDial();
       initParamSelection();
       applyModeFromInputs();
       resizeCanvas();
-      // חישוב אוטומטי לפי ברירות מחדל (CAS=350, Mach=0.80) + ציור נקודה
+      // חישוב ראשוני לפי ברירות מחדל
       runAeroCalcFromPanel();
     });
 
